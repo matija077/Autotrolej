@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Autotrolej</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="geocodeURL">http://maps.googleapis.com/maps/api/geocode/</string>
+    <string name="geocodeAuthority">maps.googleapis.com</string>
+    <string name="geocodePath1">maps</string>
+    <string name="geocodePath2">api</string>
+    <string name="geocodePath3">geocode</string>
+    <string name="rijeka">Rijeka</string>
+    <string name="json">json</string>
+    <string name="xml">xml</string>
+    <string name="addressParam">adress</string>
+    <string name="keyParam">key</string>
+    <string name="urlStanice">http://e-usluge2.rijeka.hr/OpenData/ATstanice.json</string>
+    <string name="urlLinije">http://e-usluge2.rijeka.hr/OpenData/ATlinije.json</string>
+</resources>
