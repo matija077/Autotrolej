@@ -32,7 +32,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     List<String> urlList = null;
     static final String urlLinije = "http://e-usluge2.rijeka.hr/OpenData/ATstanice.json";
     static final String urlStanice = "http://e-usluge2.rijeka.hr/OpenData/ATlinije.json";
-    databaseHelper db;
+    //databaseHelper db;
+    OrmLiteDatabaseHelper db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +49,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         urlList.add(urlStanice);
 
         // database helper instance
-        db = new databaseHelper(getApplicationContext());
+        /*db = new databaseHelper(getApplicationContext());
 
         //db.dropTable(databaseHelper.TABLE_STATION);
 
@@ -58,7 +59,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         long station1_id = db.createStation(station1);
         List<Station> stations = new ArrayList<Station>();
         stations = db.getAllStations();
-        Log.d("Station", stations.get(0).getName());
+        Log.d("Station", stations.get(0).getName());*/
+
+        //databasePart - just for now
+
+        db = new OrmLiteDatabaseHelper(getApplicationContext());
+
+        Station station1 = new Station("Kudeji", 23.45, 23.56, (short) 2);
+        db.insertStation(station1);
+        List<Station> stations = db.getAllStations();
+        Log.d("Stations", String.valueOf(stations));
+
+		//trying insertign adn getting routes
+		Route route1 = new Route("2", "Zamet", "Trsat", "Gradski");
+		db.insertRoute(route1);
+		List<Route> routes = db.getAllRoutes();
+		Log.d("Routes", String.valueOf(routes));
+
     }
 
     /**

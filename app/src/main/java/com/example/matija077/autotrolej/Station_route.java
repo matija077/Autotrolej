@@ -8,7 +8,7 @@ import com.j256.ormlite.table.DatabaseTable;
  */
 
 @DatabaseTable(tableName = "station_route")
-public class station_route {
+public class Station_route {
 
     @DatabaseField(generatedId = true)
     private Integer id;
@@ -23,12 +23,12 @@ public class station_route {
     @DatabaseField(canBeNull = false)
     private Short stationNumber;
 
-    public station_route() {
+    public Station_route() {
 
     }
 
 
-    public station_route(long station_id, long route_id, char direction,
+    public Station_route(long station_id, long route_id, char direction,
                          Boolean turnAroundStation, Short stationNumber) {
         this.station_id = station_id;
         this.route_id = route_id;

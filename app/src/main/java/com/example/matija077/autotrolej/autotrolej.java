@@ -113,10 +113,6 @@ public class autotrolej {
         @Override
         protected void onPostExecute(Object o) {
             super.onPostExecute(o);
-            /*if ((ready == FALSE) && (data.size() != 0)) {
-                ready = TRUE;
-                retur
-            }*/
             delegate.processfinish(data);
         }
     }

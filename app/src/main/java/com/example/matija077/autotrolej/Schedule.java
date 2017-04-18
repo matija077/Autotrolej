@@ -8,7 +8,7 @@ import com.j256.ormlite.table.DatabaseTable;
  */
 
 @DatabaseTable(tableName = "schedule")
-public class schedule {
+public class Schedule {
     @DatabaseField(generatedId = true)
     private Integer id;
     @DatabaseField(canBeNull = false, foreign = true)
@@ -18,11 +18,11 @@ public class schedule {
     @DatabaseField(canBeNull = false)
     private long time;
 
-    public schedule() {
+    public Schedule() {
 
     }
 
-    public schedule(long station_line_id, String date, long time) {
+    public Schedule(long station_line_id, String date, long time) {
         this.station_line_id = station_line_id;
         this.date = date;
         this.time = time;
