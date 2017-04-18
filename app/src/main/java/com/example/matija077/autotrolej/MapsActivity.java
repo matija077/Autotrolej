@@ -17,8 +17,12 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.net.URL;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.text.SimpleDateFormat;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
@@ -32,6 +36,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     List<String> urlList = null;
     static final String urlLinije = "http://e-usluge2.rijeka.hr/OpenData/ATstanice.json";
     static final String urlStanice = "http://e-usluge2.rijeka.hr/OpenData/ATlinije.json";
+	//trying to stupidly use enum here
+	/*public enum Days {
+		RADNI_DAN, SUBOTA, NEDELJA
+	}
+
+	public enum Category {
+		GRADSKI, PRIGRADSKI, NOCNI
+	}
+	Days days;
+	Category category;*/
     //databaseHelper db;
     OrmLiteDatabaseHelper db;
 
@@ -98,7 +112,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		Log.d("Station_routes", String.valueOf(station_routes));
 
 		//schedule
+		//same routine for but now we fetch station_route
+		Station_route tempStation_route = null;
+		Schedule schedule1 = null;
+		//Date constructor is depricated so we use Calendar
+		Calendar currentTime = Calendar.getInstance();
+		//trying to convert Calendar to Date
+		Date dateDate = currentTime.getTime();
+		SimpleDateFormat sdf = new SimpleDateFormat(" yyyy-MM-dd HH:mm:ss");
+		String date = null;
+		try {
+			date = sdf.format(dateDate);
+		} catch (Exception e1) {
+			e1.printStackTrace();
+		}
 
+		tempStation_route = db.getStation_routeById(stations.get(0).getId());
+
+		if (tempStation_route != null) {
+			schedule1 = new Schedule(tempStation_route, date, "RADNI DAN");
+			db.insertSchedule(schedule1);
+		}
+
+		List<Schedule> schedules = db.getAllSchedules();
+		Log.d("schedules", String.valueOf(schedules));
+
+		//close connections and release DAO objects.
 		db.close();
     }
 

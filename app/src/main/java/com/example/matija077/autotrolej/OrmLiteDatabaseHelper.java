@@ -23,7 +23,7 @@ import java.util.List;
 public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 
 	private static final String DATABASE_NAME = "autotorlej.db";
-	private static final int DATABASE_VERSION = 5;
+	private static final int DATABASE_VERSION = 6;
 
 	//JAVA interface for acessing Database objects
 	private Dao<Station, Integer> stationDao;
@@ -44,7 +44,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		try {
 			TableUtils.createTableIfNotExists(connectionSource, Station.class);
 			TableUtils.createTableIfNotExists(connectionSource, Route.class);
-			//TableUtils.createTableIfNotExists(connectionSource, Schedule.class);
+			TableUtils.createTableIfNotExists(connectionSource, Schedule.class);
 			TableUtils.createTableIfNotExists(connectionSource, Station_route.class);
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -57,7 +57,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		try {
 			//dropping tables if they exists, last parametar ignores errors in case table doesn't exist.
 			TableUtils.dropTable(connectionSource, Station_route.class, true);
-			//TableUtils.dropTable(connectionSource, Schedule.class, true);
+			TableUtils.dropTable(connectionSource, Schedule.class, true);
 			TableUtils.dropTable(connectionSource, Route.class, true);
 			TableUtils.dropTable(connectionSource, Station.class, true);
 			onCreate(sqLiteDatabase, connectionSource);
@@ -67,14 +67,28 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 	}
 
+	//development porpoise is to drop data once inserted for now
+
+	private void clearAllData() {
+		try {
+			TableUtils.clearTable(connectionSource, Station.class);
+			TableUtils.clearTable(connectionSource, Route.class);
+			TableUtils.clearTable(connectionSource, Schedule.class);
+			TableUtils.clearTable(connectionSource, Station_route.class);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
 	//Close the database connections and clear any cached DAOs.
 	@Override
 	public void close() {
-		super.close();
 		stationDao = null;
 		routeDao = null;
-		//scheduleDao = null;
+		scheduleDao = null;
 		station_routeDao = null;
+		clearAllData();
+		super.close();
 	}
 
 	public Dao<Station, Integer> getStationDao() throws SQLException {
@@ -141,7 +155,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			station = stationDao.queryForId(id);
 		} catch (SQLException e) {
 			e.printStackTrace();
-			Log.e("getStationByIdStaton()", "Error getting station with id" + id);
+			Log.e("getStationById()", "Error getting station with id" + id);
 		}
 		return station;
 	}
@@ -181,7 +195,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			route = routeDao.queryForId(id);
 		} catch (SQLException e) {
 			e.printStackTrace();
-			Log.e("getRouteByIdStaton()", "Error getting route with id" + id);
+			Log.e("getRouteById()", "Error getting route with id" + id);
 		}
 		return route;
 	}
@@ -225,6 +239,19 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			e.printStackTrace();
 			Log.e("getAllRoutes()", "Error fatching all routes");
 		}
+
+		try {
+			for (int i= 0; i < schedules.size(); i++) {
+				station_routeDao.refresh(schedules.get(i).getStation_route());
+				Station_route station_route = schedules.get(i).getStation_route();
+				stationDao.refresh(station_route.getStation());
+				routeDao.refresh(station_route.getRoute());
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("getAllStation_routes()", "Error filling stations or routes");
+		}
+
 		return schedules;
 	}
 
@@ -244,6 +271,17 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			e.printStackTrace();
 			Log.e("insertRoute()", "Error inserting route in database");
 		}
+	}
+
+	public Station_route getStation_routeById(Integer id) {
+		Station_route station_route = null;
+		try {
+			station_route = station_routeDao.queryForId(id);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("getStation_routeById()", "Error getting station_route with id" + id);
+		}
+		return station_route;
 	}
 
 	//our station_route will only have id set in foreign object.s If we want them filled we

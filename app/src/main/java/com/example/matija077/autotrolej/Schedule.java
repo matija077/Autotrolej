@@ -16,25 +16,32 @@ public class Schedule {
     @DatabaseField(generatedId = true)
     private Integer id;
     @DatabaseField(canBeNull = false, foreign = true)
-    private long station_line_id;
+    private Station_route station_route;
 	//You can also specify the dataType field to the @DatabaseField annotation as a
 	// DataType.DATE_STRING in which case the date will be stored as a string in
 	// yyyy-MM-dd HH:mm:ss.SSSSSS format.
 	//setting format because default adds milliseconds.
-    @DatabaseField(canBeNull = false, dataType = DataType.DATE_STRING,
+	//we don't care about format in base, for all we know it can be String.
+	//String makes this easy
+    /*@DatabaseField(canBeNull = false, dataType = DataType.DATE_STRING,
 			format = " yyyy-MM-dd HH:mm:ss")
-    private Date date;
-	//Persisted as SQL type TIMESTAMP
-    @DatabaseField(canBeNull = false, dataType = DataType.DATE)
-    private Date time;
+    private Date date;*/
+    @DatabaseField(canBeNull = false)
+	private String date;
+    @DatabaseField(canBeNull = false)
+    private String day;
 
     public Schedule() {
 
     }
 
-    public Schedule(long station_line_id, Date date, Date time) {
-        this.station_line_id = station_line_id;
+    public Schedule(Station_route station_route, String date, String day) {
+        this.station_route = station_route;
         this.date = date;
-        this.time = time;
+        this.day = day;
     }
+
+    public Station_route getStation_route() {
+		return this.station_route;
+	}
 }

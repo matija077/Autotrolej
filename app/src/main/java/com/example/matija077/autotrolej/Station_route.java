@@ -44,4 +44,8 @@ public class Station_route {
     public Route getRoute() {
         return this.route;
     }
+
+    public Integer getId() {
+		return this.id;
+	}
 }

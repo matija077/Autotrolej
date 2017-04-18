@@ -21,10 +21,6 @@ public class Route {
     @DatabaseField(canBeNull = false)
     private String categoy;
 
-    public final String CITY = "city";
-    public final String SUBURB = "suburb";
-    public final String NIGHT = "night";
-
     public Route() {
     }
 
