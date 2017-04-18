@@ -34,4 +34,6 @@ public class Route {
         this.directionB = directionB;
         this.categoy = categoy;
     }
+
+    public Integer getId() { return this.id;}
 }

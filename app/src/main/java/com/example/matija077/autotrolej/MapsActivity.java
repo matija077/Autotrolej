@@ -70,12 +70,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         List<Station> stations = db.getAllStations();
         Log.d("Stations", String.valueOf(stations));
 
-		//trying insertign adn getting routes
+		//trying to insert and get routes
 		Route route1 = new Route("2", "Zamet", "Trsat", "Gradski");
 		db.insertRoute(route1);
 		List<Route> routes = db.getAllRoutes();
 		Log.d("Routes", String.valueOf(routes));
 
+		//trying to insert and get schedules
+
+		//trying to insert and get station_routes
+		//in case of no table records we get null
+		Station tempStation = null;
+		Route tempRoute = null;
+		Station_route station_route1 = null;
+
+		//get id for foreign keys
+		tempStation = db.getStationById(stations.get(0).getId());
+		tempRoute = db.getRouteById(routes.get(0).getId());
+
+		if ((tempStation != null) && (tempRoute != null)) {
+			station_route1 = new Station_route(tempStation, tempRoute,
+					(char) 'A', Boolean.TRUE, (short) 1);
+			db.insertStation_route(station_route1);
+		}
+
+		List<Station_route> station_routes = db.getAllStation_routes();
+		Log.d("Station_routes", String.valueOf(station_routes));
+
+		//schedule
+
+		db.close();
     }
 
     /**

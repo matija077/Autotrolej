@@ -32,10 +32,7 @@ public class Station {
         this.zone = zone;
     }
 
-    //for implementing our own wrapper for dealing with SQLite
-    public String getClassName() {
-        return this.getClass().getSuperclass().getName();
-    }
+    public Integer getId() { return this.id;}
 
     public String getName() {
         return this.name;

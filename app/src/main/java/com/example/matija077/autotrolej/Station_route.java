@@ -12,10 +12,10 @@ public class Station_route {
 
     @DatabaseField(generatedId = true)
     private Integer id;
-    @DatabaseField(canBeNull = false, foreign = true)
-    private long station_id;
-    @DatabaseField(canBeNull = false, foreign = true)
-    private long route_id;
+    @DatabaseField(canBeNull = false, foreign = true, columnName = "station_id")
+    private Station station;
+    @DatabaseField(canBeNull = false, foreign = true, columnName = "route_id")
+    private Route route;
     @DatabaseField(canBeNull = false)
     private char direction;
     @DatabaseField(canBeNull = false)
@@ -28,12 +28,20 @@ public class Station_route {
     }
 
 
-    public Station_route(long station_id, long route_id, char direction,
+    public Station_route(Station station, Route route, char direction,
                          Boolean turnAroundStation, Short stationNumber) {
-        this.station_id = station_id;
-        this.route_id = route_id;
+        this.station = station;
+        this.route = route;
         this.direction = direction;
         this.turnAroundStation = turnAroundStation;
         this.stationNumber = stationNumber;
+    }
+
+    public Station getStation() {
+        return this.station;
+    }
+
+    public Route getRoute() {
+        return this.route;
     }
 }
