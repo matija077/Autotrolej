@@ -33,6 +33,21 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 
 	public OrmLiteDatabaseHelper(Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
+		initialize();
+	}
+
+	private void initialize() {
+		try {
+			stationDao = getStationDao();
+			routeDao = getRouteDao();
+			station_routeDao = getStation_routeDao();
+			scheduleDao = getScheduleDao();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 	}
 
 	@Override
@@ -87,9 +102,15 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		routeDao = null;
 		scheduleDao = null;
 		station_routeDao = null;
-		clearAllData();
+		//clearAllData();
 		super.close();
 	}
+
+	//wrapper for private clearAllData()
+	public void clear() {
+		clearAllData();
+	}
+
 
 	public Dao<Station, Integer> getStationDao() throws SQLException {
 		if (stationDao == null) {

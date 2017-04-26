@@ -10,7 +10,7 @@ import com.j256.ormlite.table.DatabaseTable;
 @DatabaseTable(tableName = "station")
 public class Station {
 
-    @DatabaseField(generatedId = true)
+    @DatabaseField(generatedId = false)
     private Integer id;
     @DatabaseField(canBeNull = false)
     private String name;
@@ -25,11 +25,15 @@ public class Station {
 
     }
 
-    public Station(String name, double gpsx, double gpsy, short zone) {
+    //everythign is string because it is much easier to work with strings and
+    //strings are used in JSON
+
+    public Station(String id, String name, String gpsx, String gpsy, String zone) {
+        this.id = Integer.valueOf(id);
         this.name = name;
-        this.gpsx = gpsx;
-        this.gpsy = gpsy;
-        this.zone = zone;
+        this.gpsx = Double.valueOf(gpsx);
+        this.gpsy = Double.valueOf(gpsy);
+        this.zone = Short.valueOf(zone);
     }
 
     public Integer getId() { return this.id;}

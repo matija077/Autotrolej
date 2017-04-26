@@ -1,7 +1,13 @@
 package com.example.matija077.autotrolej;
 
+import android.app.ProgressDialog;
+import android.nfc.Tag;
 import android.os.AsyncTask;
 import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -75,7 +81,6 @@ public class autotrolej {
                 BufferedReader reader = null;
                 data = new ArrayList<String>();
 
-
                 for (int i = 0; i < urlList.size(); i++) {
                     try {
                         URL url = new URL(urlList.get(i));
@@ -112,8 +117,30 @@ public class autotrolej {
 
         @Override
         protected void onPostExecute(Object o) {
+			//Thread waits for Debugger to be attached to its process.
+			android.os.Debug.waitForDebugger();
+
             super.onPostExecute(o);
-            delegate.processfinish(data);
+			List<Station> stations = new ArrayList<Station>();
+
+            try {
+				JSONArray jsonArray = new JSONArray(data.get(0));
+                for (int i = 0; i < jsonArray.length(); i++) {
+
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                    String id = jsonObject.getString("StanicaId");
+                    String name = jsonObject.getString("Naziv");
+                    String gpsx = jsonObject.getString("GpsX");
+                    String gpsy = jsonObject.getString("GpsY");
+
+					Station station = new Station(id, name, gpsx, gpsy, "1");
+					stations.add(station);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            delegate.processfinish(stations);
         }
     }
 }

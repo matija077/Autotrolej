@@ -34,8 +34,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     List<String> data = new ArrayList<String>();
     autotrolej.jsonTask asyncTask = null;
     List<String> urlList = null;
-    static final String urlLinije = "http://e-usluge2.rijeka.hr/OpenData/ATstanice.json";
-    static final String urlStanice = "http://e-usluge2.rijeka.hr/OpenData/ATlinije.json";
+    static final String urlStanice = "http://e-usluge2.rijeka.hr/OpenData/ATstanice.json";
+    static final String urlLinije = "http://e-usluge2.rijeka.hr/OpenData/ATlinije.json";
 	//trying to stupidly use enum here
 	/*public enum Days {
 		RADNI_DAN, SUBOTA, NEDELJA
@@ -59,30 +59,65 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         urlList = new ArrayList<String>();
-        urlList.add(urlLinije);
+        //urlList.add(urlLinije);
         urlList.add(urlStanice);
 
-        // database helper instance
-        /*db = new databaseHelper(getApplicationContext());
 
-        //db.dropTable(databaseHelper.TABLE_STATION);
 
-        //Station instance
-        Station station1 = new Station("Kudeji", 23.45, 23.56, (short) 2);
+    }
 
-        long station1_id = db.createStation(station1);
-        List<Station> stations = new ArrayList<Station>();
-        stations = db.getAllStations();
-        Log.d("Station", stations.get(0).getName());*/
+    /**
+     * Manipulates the map once available.
+     * This callback is triggered when the map is ready to be used.
+     * This is where we can add markers or lines, add listeners or move the camera. In this case,
+     * we just add a marker near Sydney, Australia.
+     * If Google Play services is not installed on the device, the user will be prompted to install
+     * it inside the SupportMapFragment. This method will only be triggered once the user has
+     * installed Google Play services and returned to the app.
+     */
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
 
-        //databasePart - just for now
+        // Add a marker in Sydney and move the camera
+        LatLng sydney = new LatLng(-34, 151);
+        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        autotrolej = new autotrolej();
+        asyncTask = new autotrolej.jsonTask(urlList);
+        asyncTask.delegate = this;
+        asyncTask.execute(urlList);
+    }
 
-        db = new OrmLiteDatabaseHelper(getApplicationContext());
+    @Override
+    public void processfinish(List params) {
+        Log.d(TAG, String.valueOf(params));
+		db = new OrmLiteDatabaseHelper(getApplicationContext());
+		db.clear();
 
-        Station station1 = new Station("Kudeji", 23.45, 23.56, (short) 2);
-        db.insertStation(station1);
-        List<Station> stations = db.getAllStations();
-        Log.d("Stations", String.valueOf(stations));
+		for (int i = 0; i < params.size(); i++) {
+			db.insertStation((Station) params.get(i));
+		}
+
+		List<Station> stations = new ArrayList<Station>();
+		stations = db.getAllStations();
+		Log.d(TAG, String.valueOf(stations));
+		db.close();
+    }
+
+
+
+    //trying database
+
+	public void doDatabase() {
+		//databasePart - just for now
+
+		db = new OrmLiteDatabaseHelper(getApplicationContext());
+
+		Station station1 = new Station("1", "Kudeji", "23.45", "23.56", "2");
+		db.insertStation(station1);
+		List<Station> stations = db.getAllStations();
+		Log.d("Stations", String.valueOf(stations));
 
 		//trying to insert and get routes
 		Route route1 = new Route("2", "Zamet", "Trsat", "Gradski");
@@ -139,37 +174,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		//close connections and release DAO objects.
 		db.close();
-    }
-
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
-        autotrolej = new autotrolej();
-        asyncTask = new autotrolej.jsonTask(urlList);
-        asyncTask.delegate = this;
-        asyncTask.execute(urlList);
-    }
-
-    @Override
-    public void processfinish(List params) {
-        Log.d(TAG, String.valueOf(params));
-    }
-
-    //trying database
-
+	}
 }
 
