@@ -32,4 +32,16 @@ public class Route {
     }
 
     public Integer getId() { return this.id;}
+
+    public  String getRouteMark() {
+        return this.routeMark;
+    }
+
+    public void setDirectionA(String A) {
+        this.directionA = A;
+    }
+
+    public void setDirectionB(String B) {
+        this.directionB = B;
+    }
 }

@@ -53,7 +53,7 @@ public class autotrolej {
     }*/
 
     public interface asyncResponse {
-        void processfinish(List list);
+        void processfinish(List<Station> stations, List<Route> routes);
     }
 
     public static class jsonTask extends AsyncTask {
@@ -122,25 +122,169 @@ public class autotrolej {
 
             super.onPostExecute(o);
 			List<Station> stations = new ArrayList<Station>();
+			List<Route> routes = new ArrayList<Route>();
 
-            try {
-				JSONArray jsonArray = new JSONArray(data.get(0));
-                for (int i = 0; i < jsonArray.length(); i++) {
+			if (data != null) {
+				if (data.get(0) != null) {
+					try {
+						JSONArray jsonArray = new JSONArray(data.get(0));
+						for (int i = 0; i < jsonArray.length(); i++) {
 
-                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+							JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                    String id = jsonObject.getString("StanicaId");
-                    String name = jsonObject.getString("Naziv");
-                    String gpsx = jsonObject.getString("GpsX");
-                    String gpsy = jsonObject.getString("GpsY");
+							String id = jsonObject.getString("StanicaId");
+							String name = jsonObject.getString("Naziv");
+							String gpsx = jsonObject.getString("GpsX");
+							String gpsy = jsonObject.getString("GpsY");
 
-					Station station = new Station(id, name, gpsx, gpsy, "1");
-					stations.add(station);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            delegate.processfinish(stations);
+							Station station = new Station(id, name, gpsx, gpsy, "1");
+							stations.add(station);
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+
+				if (data.get(1) != null) {
+					//	IMPORTANT: USE STRING.EQUALS(STRING) FOR STRING COMPARISION.
+					try {
+						JSONArray jsonArray = new JSONArray(data.get(1));
+						List<String> routeMarkListExisting = new ArrayList<String>();
+						//our error array just in case.
+						List<String> routeErrors = new ArrayList<String>();
+
+						//routes
+						for (int i = 0; i < jsonArray.length(); i++) {
+							JSONObject jsonObject = jsonArray.getJSONObject(i);
+							String routeMark = null;
+							String directionA = null;
+							String directionB = null;
+							String category = null;
+							/* 	LinVarId looks like this -> "route-direction-version" so we need
+								route for routes and direction for directionA/B, version is needed
+							 	later
+							*/
+							String routeMarkName= jsonObject.getString("LinVarId").split("-")[0];
+							String routeMarkDirection = jsonObject.getString("LinVarId")
+									.split("-")[1];
+							/*	Both "Smjer" and "routeMarkDirection" need to be the same. If not
+								we populate error array with "LinVarId".
+							*/
+
+							//first we check for existing routeMarks in our helper routeMark list.
+							//if it doesn't we add it.
+							if (!routeMarkListExisting.contains(routeMarkName)) {
+								//if JSON is not correct populate error array.
+								String temp = jsonObject.getString("Smjer");
+								if (temp.equals(routeMarkDirection)) {
+									/*	because of JSON is the way it is we will first add
+										one direction for our route.
+									*/
+									if (jsonObject.getString("Smjer").equals("A")) {
+										directionA = jsonObject.getString("NazivVarijanteLinije");
+									} else {
+										directionB = jsonObject.getString("NazivVarijanteLinije");
+									}
+								} else {
+									routeErrors.add(jsonObject.getString("LinVarId"));
+								}
+
+								/*	for category we need to split our routeMarkName -> "INTCHAR"
+									into "INT" and "CHAR" because all "INT" between 1 and 11 are
+									city buses, those between 17 and 32 are suburb buses and
+									10* are night buses. This is for now
+									TODO: get this completly right.
+								*/
+								/*
+									\D matches all non-digit characters, while \d matches all
+									digit characters. ?<= is a positive lookbehind
+									(so everything before the current position is asserted to be a
+									digit character), ?= is a positive lookahead
+									(so everything after the current position is asserted as a
+									non-digit character).
+								*/
+								String[] categorySplit = routeMarkName.split("(?=\\D)(?<=\\d)");
+								int routeMarkNumber = Integer.parseInt(categorySplit[0]);
+								if ((routeMarkNumber <= 9) || (routeMarkNumber == 13)) {
+									category = "city";
+								} else if (routeMarkNumber < 100) {
+									category = "suburb";
+								} else {
+									category = "night";
+								}
+
+								Route route = new Route(routeMarkName, directionA, directionB,
+										category);
+								routes.add(route);
+								routeMarkListExisting.add(routeMarkName);
+
+							// if it contains the route we want to add the other direction
+							} else {
+								/*	using index of routeMarkName array because both arrays are
+									populated at the same time
+								*/
+								int index = routeMarkListExisting.indexOf(routeMarkName);
+								//	using setDirection methods without using additional memory.
+								if ((directionA == null) && (jsonObject.getString("Smjer")
+										.equals("A"))) {
+									routes.get(index).setDirectionA(jsonObject
+											.getString("NazivVarijanteLinije"));
+								} else if ((directionB == null) && (jsonObject.getString("Smjer")
+										.equals("B"))) {
+									routes.get(index).setDirectionB(jsonObject.
+											getString("NazivVarijanteLinije"));
+								}
+							}
+						}
+
+						//route-lines actually
+						/*for (int i = 0; i < jsonArray.length(); i++) {
+
+							//defining in advance because of if statements.
+							JSONObject jsonObject = jsonArray.getJSONObject(i);
+							String routeMark = null;
+							String directionA = null;
+							String directionB = null;
+							String category = null;
+
+							//first we check for existing routeMarks in our helper routeMark list.
+							//if it doesn't we add it.
+							if (!routeMarkListExisting.contains(jsonObject.getString("LinVarId"))) {
+								routeMark = jsonObject.getString("LinVarId");
+								//because of JSON is the way it is we will first add one direction
+								//for our route.
+								if (jsonObject.getString("Smjer") == "A") {
+									directionA = jsonObject.getString("NazivVarijanteLinije");
+								} else {
+									directionB = jsonObject.getString("NazivVarijanteLinije");
+								}
+								//currently can't add category
+								//String category = jsonObject.getString("");
+
+								Route route = new Route(routeMark, directionA, directionB,
+										category);
+								routes.add(route);
+								routeMarkListExisting.add(routeMark);
+							// if it contains the route we want to add the other direction
+							} else {
+								if ((directionA == null) && (jsonObject.getString("Smjer")
+										== "A")) {
+									directionA = jsonObject.getString("NazivVarijanteLinije");
+								} else if ((directionB == null) && (jsonObject.getString("Smjer")
+										== "B")) {
+									directionB = jsonObject.getString("NazivVarijanteLinije");
+								}
+							}
+						}*/
+						routeMarkListExisting.add("end");
+					} catch (JSONException e) {
+						e.printStackTrace();
+					} catch(Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+            delegate.processfinish(stations, routes);
         }
     }
 }

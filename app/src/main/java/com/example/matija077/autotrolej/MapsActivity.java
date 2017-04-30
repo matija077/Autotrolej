@@ -59,11 +59,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         urlList = new ArrayList<String>();
-        //urlList.add(urlLinije);
-        urlList.add(urlStanice);
-
-
-
+		urlList.add(urlStanice);
+        urlList.add(urlLinije);
     }
 
     /**
@@ -90,18 +87,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
-    public void processfinish(List params) {
-        Log.d(TAG, String.valueOf(params));
+    public void processfinish(List<Station> newStations, List<Route> newRoutes) {
+        Log.d(TAG, String.valueOf(newStations));
 		db = new OrmLiteDatabaseHelper(getApplicationContext());
 		db.clear();
 
-		for (int i = 0; i < params.size(); i++) {
-			db.insertStation((Station) params.get(i));
+		for (int i = 0; i < newStations.size(); i++) {
+			db.insertStation((Station) newStations.get(i));
 		}
 
-		List<Station> stations = new ArrayList<Station>();
-		stations = db.getAllStations();
-		Log.d(TAG, String.valueOf(stations));
+		List<Station> allStations = new ArrayList<Station>();
+		allStations = db.getAllStations();
+		Log.d(TAG, String.valueOf(allStations));
+
+		for (int i = 0; i < newRoutes.size(); i++) {
+			db.insertRoute((Route) newRoutes.get(i));
+		}
+
+		List<Route> allRoutes = new ArrayList<Route>();
+		allRoutes = db.getAllRoutes();
+		Log.d(TAG, String.valueOf(allRoutes));
+
 		db.close();
     }
 
