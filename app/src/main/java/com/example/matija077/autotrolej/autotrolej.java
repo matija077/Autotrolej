@@ -161,7 +161,7 @@ public class autotrolej {
 							String directionB = null;
 							String category = null;
 							/* 	LinVarId looks like this -> "route-direction-version" so we need
-								route for routes and direction for directionA/B, version is needed
+								route for routes and direction for directionA/B, variant is needed
 							 	later
 							*/
 							String routeMarkName= jsonObject.getString("LinVarId").split("-")[0];
@@ -190,9 +190,9 @@ public class autotrolej {
 								}
 
 								/*	for category we need to split our routeMarkName -> "INTCHAR"
-									into "INT" and "CHAR" because all "INT" between 1 and 11 are
-									city buses, those between 17 and 32 are suburb buses and
-									10* are night buses. This is for now
+									into "INT" and "CHAR" because all "INT" between 1 and 9
+									including 13 are city buses, those under 100 are suburb buses
+									and 10* are night buses. This is for now
 									TODO: get this completly right.
 								*/
 								/*
