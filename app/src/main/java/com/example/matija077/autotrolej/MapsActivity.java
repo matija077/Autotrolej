@@ -87,7 +87,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
-    public void processfinish(List<Station> newStations, List<Route> newRoutes) {
+    public void processfinish(List<Station> newStations, List<Route> newRoutes, List<Station_route>
+							  newStationRoutes) {
         Log.d(TAG, String.valueOf(newStations));
 		db = new OrmLiteDatabaseHelper(getApplicationContext());
 		db.clear();
@@ -145,7 +146,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		if ((tempStation != null) && (tempRoute != null)) {
 			station_route1 = new Station_route(tempStation, tempRoute,
-					(char) 'A', Boolean.TRUE, (short) 1);
+					(char) 'A', Boolean.TRUE, "1");
 			db.insertStation_route(station_route1);
 		}
 

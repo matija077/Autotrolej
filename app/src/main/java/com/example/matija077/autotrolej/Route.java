@@ -19,16 +19,16 @@ public class Route {
     @DatabaseField
     private String directionB;
     @DatabaseField(canBeNull = false)
-    private String categoy;
+    private String category;
 
     public Route() {
     }
 
-    public Route(String routeMark, String directionA, String directionB, String categoy) {
+    public Route(String routeMark, String directionA, String directionB, String category) {
         this.routeMark = routeMark;
         this.directionA = directionA;
         this.directionB = directionB;
-        this.categoy = categoy;
+        this.category = category;
     }
 
     public Integer getId() { return this.id;}
@@ -37,8 +37,16 @@ public class Route {
         return this.routeMark;
     }
 
+    public String getDirectionA() {
+        return this.directionA;
+    }
+
     public void setDirectionA(String A) {
         this.directionA = A;
+    }
+
+    public String getDirectionB() {
+        return this.directionB;
     }
 
     public void setDirectionB(String B) {

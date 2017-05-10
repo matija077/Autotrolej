@@ -29,12 +29,12 @@ public class Station_route {
 
 
     public Station_route(Station station, Route route, char direction,
-                         Boolean turnAroundStation, Short stationNumber) {
+                         Boolean turnAroundStation, String stationNumber) {
         this.station = station;
         this.route = route;
         this.direction = direction;
         this.turnAroundStation = turnAroundStation;
-        this.stationNumber = stationNumber;
+        this.stationNumber = Short.valueOf(stationNumber);
     }
 
     public Station getStation() {

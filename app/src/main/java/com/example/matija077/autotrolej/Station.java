@@ -38,6 +38,10 @@ public class Station {
 
     public Integer getId() { return this.id;}
 
+    public String getStringId() {
+        return this.id.toString();
+    }
+
     public String getName() {
         return this.name;
     }

@@ -17,9 +17,11 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+import static android.content.ContentValues.TAG;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 
@@ -53,7 +55,8 @@ public class autotrolej {
     }*/
 
     public interface asyncResponse {
-        void processfinish(List<Station> stations, List<Route> routes);
+        void processfinish(List<Station> stations, List<Route> routes,  List<Station_route>
+				stationRoutes);
     }
 
     public static class jsonTask extends AsyncTask {
@@ -98,6 +101,21 @@ public class autotrolej {
                             buffer.append(line + "\n");
                         }
 
+                        //	testing poor internet conditions
+						/*
+                        int loopCounter = 0;
+						line = reader.readLine();
+                        while ((line != null)) {
+							buffer.append(line + "\n");
+							loopCounter++;
+							try {
+								line = reader.readLine();
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+						*/
+
                         data.add(String.valueOf(buffer));
                     } catch (MalformedURLException e) {
                         e.printStackTrace();
@@ -123,6 +141,7 @@ public class autotrolej {
             super.onPostExecute(o);
 			List<Station> stations = new ArrayList<Station>();
 			List<Route> routes = new ArrayList<Route>();
+			List<Station_route> station_routes = new ArrayList<Station_route>();
 
 			if (data != null) {
 				if (data.get(0) != null) {
@@ -193,7 +212,7 @@ public class autotrolej {
 									into "INT" and "CHAR" because all "INT" between 1 and 9
 									including 13 are city buses, those under 100 are suburb buses
 									and 10* are night buses. This is for now
-									TODO: get this completly right.
+									TODO: get this complitly right.
 								*/
 								/*
 									\D matches all non-digit characters, while \d matches all
@@ -204,7 +223,17 @@ public class autotrolej {
 									non-digit character).
 								*/
 								String[] categorySplit = routeMarkName.split("(?=\\D)(?<=\\d)");
-								int routeMarkNumber = Integer.parseInt(categorySplit[0]);
+								if (categorySplit[0].equals("KBC")) {
+									continue;
+								}
+								int routeMarkNumber;
+								try {
+									routeMarkNumber = Integer.parseInt(categorySplit[0]);
+								} catch (Exception e) {
+									e.printStackTrace();
+									continue;
+								}
+
 								if ((routeMarkNumber <= 9) || (routeMarkNumber == 13)) {
 									category = "city";
 								} else if (routeMarkNumber < 100) {
@@ -238,44 +267,119 @@ public class autotrolej {
 						}
 
 						//route-lines actually
-						/*for (int i = 0; i < jsonArray.length(); i++) {
+						for (int i = 0; i < jsonArray.length(); i++) {
 
 							//defining in advance because of if statements.
 							JSONObject jsonObject = jsonArray.getJSONObject(i);
-							String routeMark = null;
-							String directionA = null;
-							String directionB = null;
-							String category = null;
+							//Log.d(TAG, String.valueOf(i));
+							List<String> parsedLinVarId = new ArrayList<String>();
 
-							//first we check for existing routeMarks in our helper routeMark list.
-							//if it doesn't we add it.
-							if (!routeMarkListExisting.contains(jsonObject.getString("LinVarId"))) {
-								routeMark = jsonObject.getString("LinVarId");
-								//because of JSON is the way it is we will first add one direction
-								//for our route.
-								if (jsonObject.getString("Smjer") == "A") {
-									directionA = jsonObject.getString("NazivVarijanteLinije");
-								} else {
-									directionB = jsonObject.getString("NazivVarijanteLinije");
-								}
-								//currently can't add category
-								//String category = jsonObject.getString("");
+							try {
+								parsedLinVarId = Arrays.asList(jsonObject.getString("LinVarId").
+										split("-"));
+							} catch (JSONException e) {
+								e.printStackTrace();
+							}
 
-								Route route = new Route(routeMark, directionA, directionB,
-										category);
-								routes.add(route);
-								routeMarkListExisting.add(routeMark);
-							// if it contains the route we want to add the other direction
+							// check if LinVarId is not in correct form (3 parts)
+							if (parsedLinVarId.size() != 3) {
+								continue;
 							} else {
-								if ((directionA == null) && (jsonObject.getString("Smjer")
-										== "A")) {
-									directionA = jsonObject.getString("NazivVarijanteLinije");
-								} else if ((directionB == null) && (jsonObject.getString("Smjer")
-										== "B")) {
-									directionB = jsonObject.getString("NazivVarijanteLinije");
+								// for now only simple lines whose variant(index 2) is 0.
+								//TODO: add all lines
+								if (parsedLinVarId.get(2).equals("0")) {
+									/*
+										check if station_route already exists because of duplicates
+										check route-direction-variant route part equals existing
+										routeMark and StanicaId equals existing stanicaId.
+									*/
+									int j = 0;
+									Boolean station_route_exists = FALSE;
+									for (j = 0; j < station_routes.size(); j++) {
+										if (parsedLinVarId.get(0).equals(station_routes.get(j).
+												getRoute().getRouteMark()) && jsonObject.
+												getString("StanicaId").equals(station_routes.get(j).
+												getStation().getStringId())) {
+											//	we dont want to check anymore.
+											station_route_exists = TRUE;
+											break;
+
+										}
+									}
+									//	if station_route already exists continue to next object.
+									if (station_route_exists == TRUE) {
+										continue;
+									}
+
+									/*
+										Check if route exists in routes. if it does return
+									 	Route object, if not go to the next object in JSON. Also
+									 	check for direction
+									*/
+									j = 0;
+									Route route = null;
+									Character direction = null;
+									do {
+										if (parsedLinVarId.get(0).equals(routes.get(j).
+												getRouteMark())) {
+											route = routes.get(j);
+										} else {
+											continue;
+										}
+
+										/*
+											check for direction in route
+										 */
+										String stationRouteName = jsonObject.getString
+												("NazivVarijanteLinije");
+										if ((!stationRouteName.equals(routes.get(j).
+												getDirectionA())) && (!stationRouteName.equals
+												(routes.get(j).getDirectionB()))) {
+											continue;
+										//	trick for converting String to Character is charAt.
+										} else {
+											direction = jsonObject.getString("Smjer").charAt(0);
+										}
+										j++;
+									} while (j < routes.size() && route == null);
+
+									/*
+										Check if station exists in routes. if it does return
+									 	Station object, if not go to the next object in JSON.
+									*/
+									Station station = null;
+									for (j= 0; j < stations.size(); j++) {
+										if (jsonObject.getString("StanicaId").equals(
+												stations.get(j).getStringId())) {
+											station = stations.get(j);
+											break;
+										} else {
+											continue;
+										}
+									}
+
+									/*
+										for now turnArundStation is empty, we proceed to
+										stationNumber
+									*/
+									Boolean turnAroundStation = FALSE;
+									String stationNumber = jsonObject.getString("RedniBrojStanice");
+									if (route != null && station != null && direction != null &&
+											stationNumber != null) {
+										try {
+											Station_route station_route = new Station_route(station,
+													route, direction, turnAroundStation,
+													stationNumber);
+											station_routes.add(station_route);
+										} catch (Exception e) {
+											e.printStackTrace();
+										}
+									} else {
+										Log.e(TAG, String.valueOf(i));
+									}
 								}
 							}
-						}*/
+						}
 						routeMarkListExisting.add("end");
 					} catch (JSONException e) {
 						e.printStackTrace();
@@ -284,7 +388,7 @@ public class autotrolej {
 					}
 				}
 			}
-            delegate.processfinish(stations, routes);
+            delegate.processfinish(stations, routes, station_routes);
         }
     }
 }
