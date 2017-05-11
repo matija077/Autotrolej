@@ -48,4 +48,8 @@ public class Station_route {
     public Integer getId() {
 		return this.id;
 	}
+
+	public String getDirection() {
+        return String.valueOf(this.direction);
+    }
 }

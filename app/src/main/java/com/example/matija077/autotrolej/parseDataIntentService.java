@@ -1,0 +1,513 @@
+package com.example.matija077.autotrolej;
+
+import android.app.IntentService;
+import android.content.Intent;
+import android.content.Context;
+import android.os.AsyncTask;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static android.content.ContentValues.TAG;
+import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
+
+
+/**
+ * An {@link IntentService} subclass for handling asynchronous task requests in
+ * a service on a separate handler thread.
+ * <p>
+ * TODO: Customize class - update intent actions, extra parameters and static
+ * helper methods.
+ */
+public class parseDataIntentService extends IntentService {
+
+	OrmLiteDatabaseHelper db;
+
+	// TODO: Rename actions, choose action names that describe tasks that this
+	// IntentService can perform, e.g. ACTION_FETCH_NEW_ITEMS
+	private static final String ACTION_FOO = "com.example.matija077.autotrolej.action.FOO";
+	private static final String ACTION_BAZ = "com.example.matija077.autotrolej.action.BAZ";
+
+	// TODO: Rename parameters
+	private static final String EXTRA_PARAM1 = "com.example.matija077.autotrolej.extra.PARAM1";
+	private static final String EXTRA_PARAM2 = "com.example.matija077.autotrolej.extra.PARAM2";
+
+	public parseDataIntentService() {
+		super("parseDataIntentService");
+	}
+
+	/**
+	 * Starts this service to perform action Foo with the given parameters. If
+	 * the service is already performing a task this action will be queued.
+	 *
+	 * @see IntentService
+	 */
+	// TODO: Customize helper method
+	public static void startActionFoo(Context context, String param1, String param2) {
+		Intent intent = new Intent(context, parseDataIntentService.class);
+		intent.setAction(ACTION_FOO);
+		intent.putExtra(EXTRA_PARAM1, param1);
+		intent.putExtra(EXTRA_PARAM2, param2);
+		context.startService(intent);
+	}
+
+	/**
+	 * Starts this service to perform action Baz with the given parameters. If
+	 * the service is already performing a task this action will be queued.
+	 *
+	 * @see IntentService
+	 */
+	// TODO: Customize helper method
+	public static void startActionBaz(Context context, String param1, String param2) {
+		Intent intent = new Intent(context, parseDataIntentService.class);
+		intent.setAction(ACTION_BAZ);
+		intent.putExtra(EXTRA_PARAM1, param1);
+		intent.putExtra(EXTRA_PARAM2, param2);
+		context.startService(intent);
+	}
+
+	@Override
+	protected void onHandleIntent(Intent intent) {
+		if (intent != null) {
+			List<String> urlList = null;
+			urlList = new ArrayList<String>(intent.getStringArrayListExtra("urlList"));
+			List<String> data = null;
+			Boolean running = TRUE;
+
+			if (urlList.size() <= 0) running = FALSE;
+
+			if (running == TRUE) {
+				HttpURLConnection connection = null;
+				BufferedReader reader = null;
+				data = new ArrayList<String>();
+
+				for (int i = 0; i < urlList.size(); i++) {
+					try {
+						URL url = new URL(urlList.get(i));
+						connection = (HttpURLConnection) url.openConnection();
+						connection.connect();
+
+						InputStream stream = connection.getInputStream();
+
+						reader = new BufferedReader(new InputStreamReader(stream));
+
+						StringBuffer buffer = new StringBuffer();
+						String line = "";
+
+						while ((line = reader.readLine()) != null) {
+							buffer.append(line + "\n");
+						}
+
+						//	testing poor internet conditions
+				/*
+				int loopCounter = 0;
+				line = reader.readLine();
+				while ((line != null)) {
+					buffer.append(line + "\n");
+					loopCounter++;
+					try {
+						line = reader.readLine();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+				*/
+
+						data.add(String.valueOf(buffer));
+					} catch (MalformedURLException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					} finally {
+						if (connection != null) {
+							connection.disconnect();
+						}
+					}
+				}
+			} else {
+			}
+
+			//Thread waits for Debugger to be attached to its process.
+			android.os.Debug.waitForDebugger();
+			List<Station> stations = new ArrayList<Station>();
+			List<Route> routes = new ArrayList<Route>();
+			List<Station_route> station_routes = new ArrayList<Station_route>();
+
+			if (data != null) {
+				if (data.get(0) != null) {
+					try {
+						JSONArray jsonArray = new JSONArray(data.get(0));
+						for (int i = 0; i < jsonArray.length(); i++) {
+
+							JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+							String id = jsonObject.getString("StanicaId");
+							String name = jsonObject.getString("Naziv");
+							String gpsx = jsonObject.getString("GpsX");
+							String gpsy = jsonObject.getString("GpsY");
+
+							Station station = new Station(id, name, gpsx, gpsy, "1");
+							stations.add(station);
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					db  = new OrmLiteDatabaseHelper(getApplicationContext());
+					insertStations(stations);
+				}
+
+				if (data.get(1) != null) {
+					JSONArray jsonArray = null;
+					try {
+						jsonArray = new JSONArray(data.get(1));
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+					//	IMPORTANT: USE STRING.EQUALS(STRING) FOR STRING COMPARISION.
+					try {
+						List<String> routeMarkListExisting = new ArrayList<String>();
+						//our error array just in case.
+						List<String> routeErrors = new ArrayList<String>();
+
+						//routes
+						for (int i = 0; i < jsonArray.length(); i++) {
+							JSONObject jsonObject = jsonArray.getJSONObject(i);
+							String routeMark = null;
+							String directionA = null;
+							String directionB = null;
+							String category = null;
+							/* 	LinVarId looks like this -> "route-direction-version" so we need
+								route for routes and direction for directionA/B, variant is needed
+							 	later
+							*/
+							String routeMarkName = jsonObject.getString("LinVarId").split("-")[0];
+							String routeMarkDirection = jsonObject.getString("LinVarId")
+									.split("-")[1];
+							/*	Both "Smjer" and "routeMarkDirection" need to be the same. If not
+								we populate error array with "LinVarId".
+							*/
+
+							//first we check for existing routeMarks in our helper routeMark list.
+							//if it doesn't we add it.
+							if (! routeMarkListExisting.contains(routeMarkName)) {
+								//if JSON is not correct populate error array.
+								String temp = jsonObject.getString("Smjer");
+								if (temp.equals(routeMarkDirection)) {
+									/*	because of JSON is the way it is we will first add
+										one direction for our route.
+									*/
+									if (jsonObject.getString("Smjer").equals("A")) {
+										directionA = jsonObject.getString("NazivVarijanteLinije");
+									} else {
+										directionB = jsonObject.getString("NazivVarijanteLinije");
+									}
+								} else {
+									routeErrors.add(jsonObject.getString("LinVarId"));
+								}
+
+								/*	for category we need to split our routeMarkName -> "INTCHAR"
+									into "INT" and "CHAR" because all "INT" between 1 and 9
+									including 13 are city buses, those under 100 are suburb buses
+									and 10* are night buses. This is for now
+									TODO: get this complitly right.
+								*/
+								/*
+									\D matches all non-digit characters, while \d matches all
+									digit characters. ?<= is a positive lookbehind
+									(so everything before the current position is asserted to be a
+									digit character), ?= is a positive lookahead
+									(so everything after the current position is asserted as a
+									non-digit character).
+								*/
+								String[] categorySplit = routeMarkName.split("(?=\\D)(?<=\\d)");
+								if (categorySplit[0].equals("KBC")) {
+									continue;
+								}
+								int routeMarkNumber;
+								try {
+									routeMarkNumber = Integer.parseInt(categorySplit[0]);
+								} catch (Exception e) {
+									e.printStackTrace();
+									continue;
+								}
+
+								if ((routeMarkNumber <= 9) || (routeMarkNumber == 13)) {
+									category = "city";
+								} else if (routeMarkNumber < 100) {
+									category = "suburb";
+								} else {
+									category = "night";
+								}
+
+								Route route = new Route(routeMarkName, directionA, directionB,
+										category);
+								routes.add(route);
+								routeMarkListExisting.add(routeMarkName);
+
+								// if it contains the route we want to add the other direction
+							} else {
+								/*	using index of routeMarkName array because both arrays are
+									populated at the same time
+								*/
+								int index = routeMarkListExisting.indexOf(routeMarkName);
+								//	using setDirection methods without using additional memory.
+								if ((directionA == null) && (jsonObject.getString("Smjer")
+										.equals("A"))) {
+									routes.get(index).setDirectionA(jsonObject
+											.getString("NazivVarijanteLinije"));
+								} else if ((directionB == null) && (jsonObject.getString("Smjer")
+										.equals("B"))) {
+									routes.get(index).setDirectionB(jsonObject.
+											getString("NazivVarijanteLinije"));
+								}
+							}
+						}
+					} catch(Exception e) {
+
+					}
+
+					insertRoutes(routes);
+
+					//release memory
+					stations = null;
+					routes = null;
+					try {
+
+						//route-lines actually
+						for (int i = 0; i < jsonArray.length(); i++) {
+
+							//defining in advance because of if statements.
+							JSONObject jsonObject = jsonArray.getJSONObject(i);
+							//Log.d(TAG, String.valueOf(i));
+							List<String> parsedLinVarId = new ArrayList<String>();
+
+							try {
+								parsedLinVarId = Arrays.asList(jsonObject.getString("LinVarId").
+										split("-"));
+							} catch (JSONException e) {
+								e.printStackTrace();
+							}
+
+							// check if LinVarId is not in correct form (3 parts)
+							if (parsedLinVarId.size() != 3) {
+								continue;
+							} else {
+								// for now only simple lines whose variant(index 2) is 0.
+								//TODO: add all lines
+								if (parsedLinVarId.get(2).equals("0")) {
+									/*
+										check if station_route already exists because of duplicates
+										check route-direction-variant route part equals existing
+										routeMark and StanicaId equals existing stanicaId.
+									*/
+									int j = 0;
+									Boolean station_route_exists = FALSE;
+									for (j = 0; j < station_routes.size(); j++) {
+										Station_route tmpSR = station_routes.get(j);
+										if (parsedLinVarId.get(0).equals(tmpSR.getRoute().
+												getRouteMark()) && jsonObject.getString("StanicaId")
+												.equals(tmpSR.getStation().getStringId()) &&
+												(parsedLinVarId.get(1).equals(tmpSR.getDirection()))
+											) {
+												//	we dont want to keep checking anymore.
+												station_route_exists = TRUE;
+												break;
+										} else {
+											if ((i == 1000) || (i>2500)) {
+												Log.v(TAG, "outer" + String.valueOf(i) + "inner" +
+														String.valueOf(j));
+											}
+										}
+									}
+									//	if station_route already exists continue to next object.
+									if (station_route_exists == TRUE) {
+										continue;
+									}
+
+									/*
+										Check if route exists in routes. if it does return
+									 	Route object, if not go to the next object in JSON. Also
+									 	check for direction
+									*/
+									j = 0;
+									Route route = null;
+									Character direction = null;
+									String stationRouteName = jsonObject.getString
+											("NazivVarijanteLinije");
+
+									/*
+										NEW ROUTE CHECK. QUERY DB WITHOUT LOOPS TO PRESERVE MEMORY.
+										Query for directionA or directionB and routeMark all at
+										once. Bellow is optimization attempt that needs more work.
+									*/
+									/*
+										for optimization TODO: check todo in OrmLiteDatabaseHelper
+									*/
+									/*
+									String[] tempColumnNames = new String[] {"routeMark",
+											"directionA", "directionB"};
+									String[] tempColumnValues = new String[] {parsedLinVarId.get(0),
+											stationRouteName, stationRouteName};
+									String[] tempConnectors = new String[] {"or", "or"};
+									route = queryRoot(tempColumnNames, tempColumnValues,
+											tempConnectors);
+									*/
+
+									route = queryRoot_specific1(parsedLinVarId.get(0),
+											stationRouteName);
+									Log.v(TAG, String.valueOf(route));
+									if (route == null) {
+										continue;
+									} else {
+										stationRouteName = null;
+										direction = jsonObject.getString("Smjer").charAt(0);
+									}
+									//	old route check
+									/*do {
+										if (parsedLinVarId.get(0).equals(routes.get(j).
+												getRouteMark())) {
+											route = routes.get(j);
+										} else {
+											continue;
+										}
+
+
+										//	check for direction in route
+										String stationRouteName = jsonObject.getString
+												("NazivVarijanteLinije");
+										if ((!stationRouteName.equals(routes.get(j).
+												getDirectionA())) && (!stationRouteName.equals
+												(routes.get(j).getDirectionB()))) {
+											continue;
+											//	trick for converting String to Character is charAt.
+										} else {
+											direction = jsonObject.getString("Smjer").charAt(0);
+										}
+										j++;
+									} while (j < routes.size() && route == null);
+								*/
+
+									/*
+										Check if station exists in routes. if it does return
+									 	Station object, if not go to the next object in JSON.
+									*/
+									Station station = null;
+									for (j= 0; j < stations.size(); j++) {
+										if (jsonObject.getString("StanicaId").equals(
+												stations.get(j).getStringId())) {
+											station = stations.get(j);
+											break;
+										} else {
+											continue;
+										}
+									}
+
+									/*
+										for now turnArundStation is empty, we proceed to
+										stationNumber
+									*/
+									Boolean turnAroundStation = FALSE;
+									String stationNumber = jsonObject.getString("RedniBrojStanice");
+									if (route != null && station != null && direction != null &&
+											stationNumber != null) {
+										try {
+											Station_route station_route = new Station_route(station,
+													route, direction, turnAroundStation,
+													stationNumber);
+											station_routes.add(station_route);
+											Log.v(TAG, String.valueOf(i));
+										} catch (Exception e) {
+											e.printStackTrace();
+										}
+									} else {
+										Log.e(TAG, String.valueOf(i));
+									}
+								}
+							}
+						}
+					} catch (JSONException e) {
+						e.printStackTrace();
+					} catch(Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Handle action Foo in the provided background thread with the provided
+	 * parameters.
+	 */
+	private void handleActionFoo(String param1, String param2) {
+		// TODO: Handle action Foo
+		throw new UnsupportedOperationException("Not yet implemented");
+	}
+
+	/**
+	 * Handle action Baz in the provided background thread with the provided
+	 * parameters.
+	 */
+	private void handleActionBaz(String param1, String param2) {
+		// TODO: Handle action Baz
+		throw new UnsupportedOperationException("Not yet implemented");
+	}
+
+	private void insertStations(List<Station> stations) {
+		for (int i = 0; i < stations.size(); i++) {
+			db.insertStation(stations.get(i));
+		}
+	}
+
+	private void insertRoutes(List<Route> routes) {
+		for (int i = 0; i < routes.size(); i++) {
+			db.insertRoute(routes.get(i));
+		}
+	}
+
+	private void insertStationRoute(List<Station_route> station_routes) {
+		for (int i = 0; i < station_routes.size(); i++) {
+			db.insertStation_route(station_routes.get(i));
+		}
+	}
+
+	// basic attempt, will be deleted in the next commit.
+	/*
+	private Route queryRoot_GetRouteParam(String param, Integer id) {
+		Route route = db.queryRoute("routeMark", param, id);
+		return route;
+	}
+	*/
+
+	/*
+		optimization part which we will go back to when we have time.
+	*/
+	/*
+	private Route queryRoot(String[] columnNames, String[] params, String[] connectors) {
+		Route route = db.queryRoute(columnNames, params, connectors);
+		return route;
+	}
+	*/
+
+	/*
+		specific query that is explained in OrmLiteDatabaseHelper class.
+	*/
+	private Route queryRoot_specific1(String routeMarkValue, String directionValue) {
+		Route route = db.queryRoot_specific1(routeMarkValue, directionValue);
+		return route;
+	}
+}

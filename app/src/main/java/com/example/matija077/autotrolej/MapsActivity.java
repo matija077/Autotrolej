@@ -1,10 +1,12 @@
 package com.example.matija077.autotrolej;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.os.ResultReceiver;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -26,7 +28,7 @@ import java.text.SimpleDateFormat;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
-        autotrolej.asyncResponse {
+        autotrolej.asyncResponse{
 
     private GoogleMap mMap;
     private static final String TAG = MapsActivity.class.getSimpleName();
@@ -80,15 +82,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LatLng sydney = new LatLng(-34, 151);
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
-        autotrolej = new autotrolej();
-        asyncTask = new autotrolej.jsonTask(urlList);
-        asyncTask.delegate = this;
-        asyncTask.execute(urlList);
+        //autotrolej = new autotrolej();
+        //asyncTask = new autotrolej.jsonTask(urlList);
+       //asyncTask.delegate = this;
+        //asyncTask.execute(urlList);
+		//doDatabase();
+
+		//db = new OrmLiteDatabaseHelper(getApplicationContext());
+		Intent intent = new Intent(this, parseDataIntentService.class);
+		intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
+		startService(intent);
     }
 
     @Override
-    public void processfinish(List<Station> newStations, List<Route> newRoutes, List<Station_route>
-							  newStationRoutes) {
+    public void processfinish(List<String> data) {
+
+		/*
+		Intent intent = new Intent(this, parseDataIntentService.class);
+		intent.putStringArrayListExtra("data", (ArrayList<String>) data);
+		startService(intent);
+		*/
+        /*
         Log.d(TAG, String.valueOf(newStations));
 		db = new OrmLiteDatabaseHelper(getApplicationContext());
 		db.clear();
@@ -110,6 +124,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		Log.d(TAG, String.valueOf(allRoutes));
 
 		db.close();
+		*/
     }
 
 

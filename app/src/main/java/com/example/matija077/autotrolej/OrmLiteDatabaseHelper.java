@@ -7,12 +7,17 @@ import android.util.Log;
 
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
 import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.PreparedDelete;
+import com.j256.ormlite.stmt.PreparedQuery;
+import com.j256.ormlite.stmt.QueryBuilder;
+import com.j256.ormlite.stmt.Where;
 import com.j256.ormlite.stmt.query.In;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 
@@ -23,7 +28,7 @@ import java.util.List;
 public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 
 	private static final String DATABASE_NAME = "autotorlej.db";
-	private static final int DATABASE_VERSION = 6;
+	private static final int DATABASE_VERSION = 8;
 
 	//JAVA interface for acessing Database objects
 	private Dao<Station, Integer> stationDao;
@@ -64,22 +69,23 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		} catch (SQLException e) {
 			e.printStackTrace();
 			Log.e(OrmLiteDatabaseHelper.class.getName(), "Error creating database");
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
 	@Override
 	public void onUpgrade(SQLiteDatabase sqLiteDatabase, ConnectionSource connectionSource, int i, int i1) {
+		//dropping tables if they exists, last parametar ignores errors in case table doesn't exist.
 		try {
-			//dropping tables if they exists, last parametar ignores errors in case table doesn't exist.
 			TableUtils.dropTable(connectionSource, Station_route.class, true);
 			TableUtils.dropTable(connectionSource, Schedule.class, true);
 			TableUtils.dropTable(connectionSource, Route.class, true);
 			TableUtils.dropTable(connectionSource, Station.class, true);
-			onCreate(sqLiteDatabase, connectionSource);
 		} catch (SQLException e) {
-			Log.e("onUpgrade()", "Unable to upgrade database from version " + String.valueOf(Integer.valueOf(DATABASE_VERSION) - 1) + " to new "
-					+ DATABASE_VERSION, e);
+			e.printStackTrace();
 		}
+		onCreate(sqLiteDatabase, connectionSource);
 	}
 
 	//development porpoise is to drop data once inserted for now
@@ -231,6 +237,52 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			Log.e("getAllRoutes()", "Error fatching all routes");
 		}
 		return routes;
+	}
+
+	public Route queryRoute(String[] columnNames, String[] params, String[] connectors) {
+		Route route = null;
+		try {
+			//route = routeDao.queryBuilder()
+			//					.where().eq(columnName, param).queryForFirst();
+			QueryBuilder<Route, Integer> queryBuilder = routeDao.queryBuilder();
+			Where where = queryBuilder.where();
+			for (int i = 0; i < columnNames.length; i++) {
+				where.eq(columnNames[i], params[i]);
+				if (connectors[i].equals("and")) {
+					where.and();
+				} else if (connectors[i].equals("or")) {
+					where.or();
+				}
+			}
+			PreparedQuery<Route> preparedQuery = queryBuilder.prepare();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return route;
+	}
+
+	/*
+		Optimization is pain in the ass so this is for returning route if such exists in
+		station_route part of parsing.
+	*/
+	public Route queryRoot_specific1(String routeMarkValue, String directionValue) {
+		Route route = null;
+		try {
+			QueryBuilder<Route, Integer> queryBuilder = routeDao.queryBuilder();
+			Where<Route, Integer> where = queryBuilder.where();
+			where.and(
+				where.eq("routeMark", routeMarkValue),
+				where.or(
+					where.eq("directionA", directionValue),
+					where.eq("directionB", directionValue)
+				)
+			);
+			//PreparedQuery<Route> preparedQuery = queryBuilder.prepare();
+			route = queryBuilder.queryForFirst();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return route;
 	}
 
 	//schedule
