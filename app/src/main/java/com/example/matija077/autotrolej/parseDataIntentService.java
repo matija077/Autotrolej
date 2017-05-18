@@ -37,14 +37,6 @@ public class parseDataIntentService extends IntentService {
 
 	OrmLiteDatabaseHelper db;
 
-	// TODO: Rename actions, choose action names that describe tasks that this
-	// IntentService can perform, e.g. ACTION_FETCH_NEW_ITEMS
-	private static final String ACTION_FOO = "com.example.matija077.autotrolej.action.FOO";
-	private static final String ACTION_BAZ = "com.example.matija077.autotrolej.action.BAZ";
-
-	// TODO: Rename parameters
-	private static final String EXTRA_PARAM1 = "com.example.matija077.autotrolej.extra.PARAM1";
-	private static final String EXTRA_PARAM2 = "com.example.matija077.autotrolej.extra.PARAM2";
 
 	public parseDataIntentService() {
 		super("parseDataIntentService");
@@ -56,29 +48,6 @@ public class parseDataIntentService extends IntentService {
 	 *
 	 * @see IntentService
 	 */
-	// TODO: Customize helper method
-	public static void startActionFoo(Context context, String param1, String param2) {
-		Intent intent = new Intent(context, parseDataIntentService.class);
-		intent.setAction(ACTION_FOO);
-		intent.putExtra(EXTRA_PARAM1, param1);
-		intent.putExtra(EXTRA_PARAM2, param2);
-		context.startService(intent);
-	}
-
-	/**
-	 * Starts this service to perform action Baz with the given parameters. If
-	 * the service is already performing a task this action will be queued.
-	 *
-	 * @see IntentService
-	 */
-	// TODO: Customize helper method
-	public static void startActionBaz(Context context, String param1, String param2) {
-		Intent intent = new Intent(context, parseDataIntentService.class);
-		intent.setAction(ACTION_BAZ);
-		intent.putExtra(EXTRA_PARAM1, param1);
-		intent.putExtra(EXTRA_PARAM2, param2);
-		context.startService(intent);
-	}
 
 	@Override
 	protected void onHandleIntent(Intent intent) {
@@ -146,6 +115,7 @@ public class parseDataIntentService extends IntentService {
 			List<Station> stations = new ArrayList<Station>();
 			List<Route> routes = new ArrayList<Route>();
 			List<Station_route> station_routes = new ArrayList<Station_route>();
+			urlList = null;
 
 			if (data != null) {
 				if (data.get(0) != null) {
@@ -167,6 +137,7 @@ public class parseDataIntentService extends IntentService {
 						e.printStackTrace();
 					}
 					db  = new OrmLiteDatabaseHelper(getApplicationContext());
+					//db.clear();
 					insertStations(stations);
 				}
 
@@ -174,6 +145,7 @@ public class parseDataIntentService extends IntentService {
 					JSONArray jsonArray = null;
 					try {
 						jsonArray = new JSONArray(data.get(1));
+						data = null;
 					} catch (JSONException e) {
 						e.printStackTrace();
 					}
@@ -222,8 +194,7 @@ public class parseDataIntentService extends IntentService {
 								/*	for category we need to split our routeMarkName -> "INTCHAR"
 									into "INT" and "CHAR" because all "INT" between 1 and 9
 									including 13 are city buses, those under 100 are suburb buses
-									and 10* are night buses. This is for now
-									TODO: get this complitly right.
+									and 10* are night buses. This is for now.
 								*/
 								/*
 									\D matches all non-digit characters, while \d matches all
@@ -293,6 +264,7 @@ public class parseDataIntentService extends IntentService {
 							//defining in advance because of if statements.
 							JSONObject jsonObject = jsonArray.getJSONObject(i);
 							//Log.d(TAG, String.valueOf(i));
+							//Log.d(TAG, String.valueOf(jsonObject));
 							List<String> parsedLinVarId = new ArrayList<String>();
 
 							try {
@@ -307,13 +279,16 @@ public class parseDataIntentService extends IntentService {
 								continue;
 							} else {
 								// for now only simple lines whose variant(index 2) is 0.
-								//TODO: add all lines
-								if (parsedLinVarId.get(2).equals("0")) {
+								//if (parsedLinVarId.get(2).equals("0")) {
 									/*
 										check if station_route already exists because of duplicates
 										check route-direction-variant route part equals existing
 										routeMark and StanicaId equals existing stanicaId.
+
+										Lets implement query check for station_route. it is probably
+										faster.
 									*/
+									/*
 									int j = 0;
 									Boolean station_route_exists = FALSE;
 									for (j = 0; j < station_routes.size(); j++) {
@@ -333,17 +308,27 @@ public class parseDataIntentService extends IntentService {
 											}
 										}
 									}
-									//	if station_route already exists continue to next object.
+
+										//	if station_route already exists continue to next object.
 									if (station_route_exists == TRUE) {
 										continue;
 									}
+									*/
+									Station_route station_route = null;
+									station_route = queryStation_route_specific1(jsonObject.
+											getString("StanicaId"), parsedLinVarId.get(0),
+											parsedLinVarId.get(1));
+									if (station_route != null) {
+										continue;
+									}
+
 
 									/*
 										Check if route exists in routes. if it does return
 									 	Route object, if not go to the next object in JSON. Also
 									 	check for direction
 									*/
-									j = 0;
+									//j = 0;
 									Route route = null;
 									Character direction = null;
 									String stationRouteName = jsonObject.getString
@@ -369,7 +354,6 @@ public class parseDataIntentService extends IntentService {
 
 									route = queryRoot_specific1(parsedLinVarId.get(0),
 											stationRouteName);
-									Log.v(TAG, String.valueOf(route));
 									if (route == null) {
 										continue;
 									} else {
@@ -401,11 +385,15 @@ public class parseDataIntentService extends IntentService {
 									} while (j < routes.size() && route == null);
 								*/
 
+
+
 									/*
 										Check if station exists in routes. if it does return
 									 	Station object, if not go to the next object in JSON.
+
+									 	Now we wil try to query it instead of using stations array.
 									*/
-									Station station = null;
+									/*
 									for (j= 0; j < stations.size(); j++) {
 										if (jsonObject.getString("StanicaId").equals(
 												stations.get(j).getStringId())) {
@@ -415,6 +403,18 @@ public class parseDataIntentService extends IntentService {
 											continue;
 										}
 									}
+									*/
+									Station station = null;
+									String stanicaId = jsonObject.getString("StanicaId");
+									station = queryStation_specific1(stanicaId);
+									//stations = db.getAllStations();
+									if (station == null) {
+										continue;
+									} else {
+										stanicaId = null;
+									}
+
+
 
 									/*
 										for now turnArundStation is empty, we proceed to
@@ -425,11 +425,15 @@ public class parseDataIntentService extends IntentService {
 									if (route != null && station != null && direction != null &&
 											stationNumber != null) {
 										try {
-											Station_route station_route = new Station_route(station,
+											station_route = new Station_route(station,
 													route, direction, turnAroundStation,
 													stationNumber);
-											station_routes.add(station_route);
-											Log.v(TAG, String.valueOf(i));
+											/*
+											we want to add in db our station_route and than query it
+											when checking
+											*/
+											//station_routes.add(station_route);
+											insertStationRoute(station_route);
 										} catch (Exception e) {
 											e.printStackTrace();
 										}
@@ -437,8 +441,11 @@ public class parseDataIntentService extends IntentService {
 										Log.e(TAG, String.valueOf(i));
 									}
 								}
-							}
+							//}
 						}
+
+						//station_routes = db.getAllStation_routes();
+						db.close();
 					} catch (JSONException e) {
 						e.printStackTrace();
 					} catch(Exception e) {
@@ -447,24 +454,6 @@ public class parseDataIntentService extends IntentService {
 				}
 			}
 		}
-	}
-
-	/**
-	 * Handle action Foo in the provided background thread with the provided
-	 * parameters.
-	 */
-	private void handleActionFoo(String param1, String param2) {
-		// TODO: Handle action Foo
-		throw new UnsupportedOperationException("Not yet implemented");
-	}
-
-	/**
-	 * Handle action Baz in the provided background thread with the provided
-	 * parameters.
-	 */
-	private void handleActionBaz(String param1, String param2) {
-		// TODO: Handle action Baz
-		throw new UnsupportedOperationException("Not yet implemented");
 	}
 
 	private void insertStations(List<Station> stations) {
@@ -479,19 +468,9 @@ public class parseDataIntentService extends IntentService {
 		}
 	}
 
-	private void insertStationRoute(List<Station_route> station_routes) {
-		for (int i = 0; i < station_routes.size(); i++) {
-			db.insertStation_route(station_routes.get(i));
-		}
+	private void insertStationRoute(Station_route station_route) {
+			db.insertStation_route(station_route);
 	}
-
-	// basic attempt, will be deleted in the next commit.
-	/*
-	private Route queryRoot_GetRouteParam(String param, Integer id) {
-		Route route = db.queryRoute("routeMark", param, id);
-		return route;
-	}
-	*/
 
 	/*
 		optimization part which we will go back to when we have time.
@@ -509,5 +488,22 @@ public class parseDataIntentService extends IntentService {
 	private Route queryRoot_specific1(String routeMarkValue, String directionValue) {
 		Route route = db.queryRoot_specific1(routeMarkValue, directionValue);
 		return route;
+	}
+
+	private Station queryStation_specific1(String id){
+		Station station = db.queryStation_specific1(Integer.valueOf(id));
+		return station;
+	}
+
+	private Station_route queryStation_route_specific1(String stanicaId, String routeMarkValue,
+													   String direction) {
+		Station_route station_route = db.queryStation_route_specific1(stanicaId, routeMarkValue,
+				direction.charAt(0));
+		return station_route;
+	}
+
+	private List<Station_route> queryStation_route_specific2(String routeMarkValue) {
+		List<Station_route> station_routes = db.queryStation_route_specific2(routeMarkValue);
+		return station_routes;
 	}
 }

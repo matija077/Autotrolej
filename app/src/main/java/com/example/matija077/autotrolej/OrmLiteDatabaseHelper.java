@@ -3,6 +3,7 @@ package com.example.matija077.autotrolej;
 import android.app.ActionBar;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.nfc.Tag;
 import android.util.Log;
 
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
@@ -28,13 +29,14 @@ import java.util.List;
 public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 
 	private static final String DATABASE_NAME = "autotorlej.db";
-	private static final int DATABASE_VERSION = 8;
+	private static final int DATABASE_VERSION = 9;
 
 	//JAVA interface for acessing Database objects
 	private Dao<Station, Integer> stationDao;
 	private Dao<Route, Integer> routeDao;
 	private Dao<Schedule, Integer> scheduleDao;
 	private Dao<Station_route, Integer> station_routeDao;
+	private static final String TAG = "OrmLiteDatabaseHelper";
 
 	public OrmLiteDatabaseHelper(Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -196,6 +198,17 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			Log.e("GetAllStations()", "Error fatching all stations");
 		}
 		return stations;
+	}
+
+	public Station queryStation_specific1(Integer id) {
+		Station station = null;
+		try {
+			station = stationDao.queryBuilder()
+								.where().eq("id", id).queryForFirst();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return station;
 	}
 
 	//route
@@ -379,6 +392,38 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			Log.e("getAllStation_routes()", "Error filling stations or routes");
 		}
 
+		return station_routes;
+	}
+
+	public Station_route queryStation_route_specific1(String stationId, String routeMarkValue,
+													  Character direction) {
+		Station_route station_route = null;
+		try {
+			QueryBuilder<Station_route, Integer> queryBuilderStation_route = station_routeDao.
+					queryBuilder();
+			queryBuilderStation_route.where().eq("direction", direction);
+			QueryBuilder<Route, Integer> queryBuilderRoute = routeDao.queryBuilder();
+			queryBuilderRoute.where().eq("routeMark", routeMarkValue);
+			QueryBuilder<Station, Integer> queryBuilderStation = stationDao.queryBuilder();
+			queryBuilderStation.where().eq("id", stationId);
+			station_route = queryBuilderStation_route.join(queryBuilderRoute).
+					join(queryBuilderStation).queryForFirst();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return station_route;
+	}
+
+	public List<Station_route> queryStation_route_specific2(String routeMarkValue) {
+		List<Station_route> station_routes = null;
+		try {
+			QueryBuilder<Station_route, Integer> queryBuilderStation_route = station_routeDao.queryBuilder();
+			QueryBuilder<Route, Integer> queryBuilderRoute = routeDao.queryBuilder();
+			queryBuilderRoute.where().eq("routeMark", routeMarkValue);
+			station_routes = queryBuilderStation_route.join(queryBuilderRoute).query();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 		return station_routes;
 	}
 

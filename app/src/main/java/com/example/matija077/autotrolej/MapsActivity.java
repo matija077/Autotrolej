@@ -30,6 +30,7 @@ import java.text.SimpleDateFormat;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         autotrolej.asyncResponse{
 
+	long startTime = System.currentTimeMillis();
     private GoogleMap mMap;
     private static final String TAG = MapsActivity.class.getSimpleName();
     autotrolej autotrolej = null;
@@ -88,10 +89,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //asyncTask.execute(urlList);
 		//doDatabase();
 
-		//db = new OrmLiteDatabaseHelper(getApplicationContext());
+		db = new OrmLiteDatabaseHelper(getApplicationContext());
+		/*
 		Intent intent = new Intent(this, parseDataIntentService.class);
 		intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
-		startService(intent);
+		startService(intent);*/
+		long endTime   = System.currentTimeMillis()/1000;
+		long totalTime = endTime - startTime;
+		List<Station_route> station_routes = db.getAllStation_routes();
+		Log.i(TAG, String.valueOf(totalTime));
     }
 
     @Override
@@ -128,6 +134,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
+
+    //	checks if parsing new data is necessary
+
+	public void shouldIParse() {
+
+	}
 
     //trying database
 
