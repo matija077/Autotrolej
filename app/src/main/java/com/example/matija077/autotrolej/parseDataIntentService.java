@@ -3,6 +3,11 @@ package com.example.matija077.autotrolej;
 import android.app.IntentService;
 import android.content.Intent;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.icu.text.SimpleDateFormat;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -17,9 +22,14 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static android.content.ContentValues.TAG;
 import static java.lang.Boolean.FALSE;
@@ -51,6 +61,7 @@ public class parseDataIntentService extends IntentService {
 
 	@Override
 	protected void onHandleIntent(Intent intent) {
+		boolean check = isConnected(getApplicationContext());
 		if (intent != null) {
 			List<String> urlList = null;
 			urlList = new ArrayList<String>(intent.getStringArrayListExtra("urlList"));
@@ -137,7 +148,6 @@ public class parseDataIntentService extends IntentService {
 						e.printStackTrace();
 					}
 					db  = new OrmLiteDatabaseHelper(getApplicationContext());
-					//db.clear();
 					insertStations(stations);
 				}
 
@@ -444,8 +454,28 @@ public class parseDataIntentService extends IntentService {
 							//}
 						}
 
+						/*
+							30 days is expiration value for parsing all lines, stations and
+							station routes. To know when to do it we save a 30 days ahead date
+							in shared preferences.
+						*/
 						//station_routes = db.getAllStation_routes();
 						db.close();
+						//	garbage collector.
+						jsonArray = null;
+						/*
+							we want to save 1 month ahead time in shared preferences for any updates
+						*/
+						SharedPreferences sharedPreferences = getApplicationContext().
+								getSharedPreferences(MapsActivity.preferenceName,
+										Context.MODE_PRIVATE);
+						SharedPreferences.Editor editor = sharedPreferences.edit();
+						Calendar calendar = Calendar.getInstance();
+						DateFormat dateFormat = new java.text.SimpleDateFormat("dd MM yyyy, HH:mm");
+						calendar.add(Calendar.HOUR, 24*30);
+						String time = dateFormat.format(calendar.getTime());
+						editor.putString(MapsActivity.linesExpireKey, time);
+						editor.commit();
 					} catch (JSONException e) {
 						e.printStackTrace();
 					} catch(Exception e) {
@@ -506,4 +536,38 @@ public class parseDataIntentService extends IntentService {
 		List<Station_route> station_routes = db.queryStation_route_specific2(routeMarkValue);
 		return station_routes;
 	}
+
+	private static boolean isConnected(Context context) {
+		ConnectivityManager cm = (ConnectivityManager)context
+				.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+		NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+		if (activeNetwork != null && activeNetwork.isConnected()) {
+			try {
+				URL url = new URL("http://www.google.com/");
+				HttpURLConnection urlc = (HttpURLConnection)url.openConnection();
+				/*
+				urlc.setRequestProperty("User-Agent", "test");
+				urlc.setRequestProperty("Connection", "close");
+				urlc.setConnectTimeout(1000); // mTimeout is in seconds
+				*/
+				urlc.connect();
+				if (urlc.getResponseCode() == 200) {
+					return true;
+				} else {
+					return false;
+				}
+			} catch (IOException e) {
+				Log.i("warning", "Error checking internet connection", e);
+				return false;
+			} catch (Exception e) {
+				Log.e("error","error", e);
+			}
+		}
+
+		return false;
+
+	}
+
+
 }

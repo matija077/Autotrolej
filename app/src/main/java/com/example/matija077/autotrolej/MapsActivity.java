@@ -2,6 +2,9 @@ package com.example.matija077.autotrolej;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -11,6 +14,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 
+import com.google.android.gms.common.api.BooleanResult;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -18,13 +22,17 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.text.SimpleDateFormat;
+import java.util.Map;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
@@ -39,6 +47,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     List<String> urlList = null;
     static final String urlStanice = "http://e-usluge2.rijeka.hr/OpenData/ATstanice.json";
     static final String urlLinije = "http://e-usluge2.rijeka.hr/OpenData/ATlinije.json";
+	static final String preferenceName = "com.example.autotrolej.PREFERENCE_FILE_KEY";
+	static final String linesExpireKey = "com.example.autotrolej.lineExpire";
 	//trying to stupidly use enum here
 	/*public enum Days {
 		RADNI_DAN, SUBOTA, NEDELJA
@@ -90,14 +100,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		//doDatabase();
 
 		db = new OrmLiteDatabaseHelper(getApplicationContext());
+
 		/*
-		Intent intent = new Intent(this, parseDataIntentService.class);
-		intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
-		startService(intent);*/
+		should we get all stations, routes and station routes? if we do we clear db.
+		*/
+		if (shouldWeParse()) {
+			db.clear();
+			Intent intent = new Intent(this, parseDataIntentService.class);
+			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
+			startService(intent);
+		}
+
+		/*
 		long endTime   = System.currentTimeMillis()/1000;
 		long totalTime = endTime - startTime;
-		List<Station_route> station_routes = db.getAllStation_routes();
 		Log.i(TAG, String.valueOf(totalTime));
+		*/
     }
 
     @Override
@@ -135,10 +153,53 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-    //	checks if parsing new data is necessary
+    /*
+    	checks if parsing new data is necessary
 
-	public void shouldIParse() {
+    	here we check for date value saved in shared preferences to see if it is time to update.
+    	key is LinesExpireKey and if doesn't exist we should probably parse.
+    	if exists then compare current time with time aved in shared preferences. Also we include
+    	the check for database. if database is non existing we fetch new data. Also network check
+    	should be here, but NETWORK EXCEPTION COMES IF YOU DO ANYTHING REGARDING NETWORKS IN MAIN
+    	THREAD, SO IT IS WAS MOVED TO parseDataIntentService.
+   	*/
 
+	private Boolean shouldWeParse() {
+		Boolean shouldParse = true;
+		SharedPreferences preferences = getApplicationContext().getSharedPreferences(preferenceName,
+				Context.MODE_PRIVATE);
+		String date = "";
+
+		try {
+			date = preferences.getString(linesExpireKey, null);
+			Map<String, ?> list = preferences.getAll();
+		} catch (Exception e) {
+			Log.e("error", "error getting preference", e);
+		}
+		if (date == null || date == "") {
+			/*
+				TODO: what to do if shared preferences is lost?
+			*/
+		} else {
+			DateFormat dateFormat = new SimpleDateFormat("dd MM yyyy, HH:mm");
+			Calendar currentCalendar = Calendar.getInstance();
+			Calendar dateCalendar = Calendar.getInstance();
+			Date dateCalendarDate = null;
+			try {
+				dateCalendarDate = dateFormat.parse(date);
+			} catch (ParseException e) {
+				e.printStackTrace();
+			}
+			dateCalendar.setTime(dateCalendarDate);
+			if (currentCalendar.getTimeInMillis() < dateCalendar.getTimeInMillis() &&
+					db.getWritableDatabase() != null) {
+						return shouldParse = false;
+			}
+
+		}
+
+
+		return shouldParse;
 	}
 
     //trying database
@@ -209,5 +270,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		//close connections and release DAO objects.
 		db.close();
 	}
+
 }
 
