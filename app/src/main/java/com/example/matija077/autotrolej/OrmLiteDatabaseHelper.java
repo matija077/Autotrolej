@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.nfc.Tag;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.VisibleRegion;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.stmt.PreparedDelete;
@@ -209,6 +211,25 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			e.printStackTrace();
 		}
 		return station;
+	}
+
+	public List<Station> queryStation_specific2(VisibleRegion visibleRegion) {
+		List<Station> stations = new ArrayList<Station>();
+		try {
+			Station Kudeji;
+			Kudeji = stationDao.queryBuilder().where().eq("name", "Kudeji A").queryForFirst();
+
+			QueryBuilder<Station, Integer> queryBuilder = stationDao.queryBuilder();
+			Where where = queryBuilder.where();
+			where.between("gpsx", visibleRegion.farLeft.longitude,
+					visibleRegion.farRight.longitude);
+			where.and();
+			where.between("gpsy", visibleRegion.nearLeft.latitude, visibleRegion.farLeft.latitude);
+			stations = queryBuilder.query();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return stations;
 	}
 
 	//route
@@ -426,5 +447,9 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 		return station_routes;
 	}
+
+	/*public List<Station_route> queryStation_route_specific3(double gpsx, double gpsy) {
+
+	}*/
 
 }

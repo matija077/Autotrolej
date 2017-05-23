@@ -31,10 +31,13 @@ import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.VisibleRegion;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -47,6 +50,8 @@ import java.util.Date;
 import java.util.List;
 import java.text.SimpleDateFormat;
 import java.util.Map;
+
+import static java.lang.Boolean.TRUE;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
@@ -66,7 +71,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	static final String preferenceName = "com.example.autotrolej.PREFERENCE_FILE_KEY";
 	static final String linesExpireKey = "com.example.autotrolej.lineExpire";
 	private final static int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
-	private final static int DEFAULT_ZOOM = 13;
+	private final static int DEFAULT_ZOOM = 16;
 	private static final String KEY_CAMERA_POSITION = "camera_position";
 	private static final String KEY_LOCATION = "location";
     //databaseHelper db;
@@ -75,6 +80,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private Location mLastKnownLocation;
 	private CameraPosition mCameraPosition;
 	private GoogleApiClient.OnConnectionFailedListener onConnectionFailedListener;
+	/*
+	log TAG constant and Log switch
+	*/
+	public static final Boolean DebugOn = TRUE;
+	private static final String TAG_onMapReady2 = "OnMapReady-writing part";
 
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -162,8 +172,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		/*
 			map draw part - for test purposes.
 		*/
-		if (db.getWritableDatabase() != null) {
-
+		if ((db.getWritableDatabase() != null) && (mLastKnownLocation != null)) {
+			Projection projection = null;
+			try {
+				projection = mMap.getProjection();
+			} catch (Exception e) {
+				Log.i(TAG_onMapReady2, String.valueOf(e));
+			}
+			if (projection != null) {
+				VisibleRegion visibleRegion = projection.getVisibleRegion();
+				if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(visibleRegion));
+				mMap.addCircle(new CircleOptions().center(visibleRegion.farLeft).radius(150));
+				mMap.addCircle(new CircleOptions().center(visibleRegion.farRight).radius(150));
+				mMap.addCircle(new CircleOptions().center(visibleRegion.nearLeft).radius(150));
+				mMap.addCircle(new CircleOptions().center(visibleRegion.nearRight).radius(150));
+				List<Station> stations = db.queryStation_specific2(visibleRegion);
+				if (stations != null) {
+					for (int i=0; i < stations.size(); i++) {
+						LatLng latLng = new LatLng(stations.get(i).getGpsy(),
+								stations.get(i).getGpsx());
+						String stationName = stations.get(i).getName();
+						mMap.addMarker(new MarkerOptions().position(latLng).title(stationName));
+					}
+				}
+				if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(stations));
+			} else {
+				Log.i(TAG_onMapReady2, "projection is null");
+			}
+		} else {
+			Log.i(TAG_onMapReady2, String.valueOf(db.getWritableDatabase()).concat
+					(String.valueOf(mLastKnownLocation)));
 		}
 
 		/*
@@ -289,7 +327,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		if ((tempStation != null) && (tempRoute != null)) {
 			station_route1 = new Station_route(tempStation, tempRoute,
-					(char) 'A', Boolean.TRUE, "1");
+					(char) 'A', TRUE, "1");
 			db.insertStation_route(station_route1);
 		}
 
