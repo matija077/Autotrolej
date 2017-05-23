@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -26,10 +27,12 @@ import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.BooleanResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.LocationSource;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -56,7 +59,7 @@ import static java.lang.Boolean.TRUE;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
 		GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
-		autotrolej.asyncResponse{
+		LocationSource, autotrolej.asyncResponse{
 
 	long startTime = System.currentTimeMillis();
     private GoogleMap mMap;
@@ -173,32 +176,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			map draw part - for test purposes.
 		*/
 		if ((db.getWritableDatabase() != null) && (mLastKnownLocation != null)) {
-			Projection projection = null;
-			try {
-				projection = mMap.getProjection();
-			} catch (Exception e) {
-				Log.i(TAG_onMapReady2, String.valueOf(e));
-			}
-			if (projection != null) {
-				VisibleRegion visibleRegion = projection.getVisibleRegion();
-				if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(visibleRegion));
-				mMap.addCircle(new CircleOptions().center(visibleRegion.farLeft).radius(150));
-				mMap.addCircle(new CircleOptions().center(visibleRegion.farRight).radius(150));
-				mMap.addCircle(new CircleOptions().center(visibleRegion.nearLeft).radius(150));
-				mMap.addCircle(new CircleOptions().center(visibleRegion.nearRight).radius(150));
-				List<Station> stations = db.queryStation_specific2(visibleRegion);
-				if (stations != null) {
-					for (int i=0; i < stations.size(); i++) {
-						LatLng latLng = new LatLng(stations.get(i).getGpsy(),
-								stations.get(i).getGpsx());
-						String stationName = stations.get(i).getName();
-						mMap.addMarker(new MarkerOptions().position(latLng).title(stationName));
+			drawStations();
+			mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+				@Override
+				public void onCameraIdle() {
+					mMap.clear();
+					if (mMap.getCameraPosition().zoom > 14) {
+						drawStations();
+					} else {
+						/*
+							TODO: tell the user that the zoom level is to low
+						*/
 					}
 				}
-				if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(stations));
-			} else {
-				Log.i(TAG_onMapReady2, "projection is null");
-			}
+			});
 		} else {
 			Log.i(TAG_onMapReady2, String.valueOf(db.getWritableDatabase()).concat
 					(String.valueOf(mLastKnownLocation)));
@@ -293,6 +284,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 		return shouldParse;
+	}
+
+	private void drawStations() {
+		/*
+			TODO: fix the bug with resize or changing configuration options.
+		 */
+		Projection projection = null;
+		try {
+			projection = mMap.getProjection();
+		} catch (Exception e) {
+			Log.i(TAG_onMapReady2, String.valueOf(e));
+		}
+		if (projection != null) {
+			VisibleRegion visibleRegion = projection.getVisibleRegion();
+			if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(visibleRegion));
+			mMap.addCircle(new CircleOptions().center(visibleRegion.farLeft).radius(150));
+			mMap.addCircle(new CircleOptions().center(visibleRegion.farRight).radius(150));
+			mMap.addCircle(new CircleOptions().center(visibleRegion.nearLeft).radius(150));
+			mMap.addCircle(new CircleOptions().center(visibleRegion.nearRight).radius(150));
+			List<Station> stations = db.queryStation_specific2(visibleRegion);
+			if (stations != null) {
+				for (int i=0; i < stations.size(); i++) {
+					LatLng latLng = new LatLng(stations.get(i).getGpsy(),
+							stations.get(i).getGpsx());
+					String stationName = stations.get(i).getName();
+					mMap.addMarker(new MarkerOptions().position(latLng).title(stationName));
+				}
+			}
+			if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(stations));
+		} else {
+			Log.i(TAG_onMapReady2, "projection is null");
+		}
 	}
 
     //trying database
@@ -456,6 +479,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	@Override
 	public void onConnectionSuspended(int i) {
+
+	}
+
+	@Override
+	public void activate(OnLocationChangedListener onLocationChangedListener) {
+
+	}
+
+	@Override
+	public void deactivate() {
 
 	}
 
