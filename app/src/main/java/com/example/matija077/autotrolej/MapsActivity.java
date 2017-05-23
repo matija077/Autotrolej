@@ -1,24 +1,38 @@
 package com.example.matija077.autotrolej;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentController;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.os.ResultReceiver;
 import android.util.Log;
 import android.widget.Toast;
 
 
+import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.BooleanResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -36,10 +50,12 @@ import java.util.Map;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
-        autotrolej.asyncResponse{
+		GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
+		autotrolej.asyncResponse{
 
 	long startTime = System.currentTimeMillis();
     private GoogleMap mMap;
+	private GoogleApiClient mGoogleApiClient;
     private static final String TAG = MapsActivity.class.getSimpleName();
     autotrolej autotrolej = null;
     List<String> data = new ArrayList<String>();
@@ -49,32 +65,56 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     static final String urlLinije = "http://e-usluge2.rijeka.hr/OpenData/ATlinije.json";
 	static final String preferenceName = "com.example.autotrolej.PREFERENCE_FILE_KEY";
 	static final String linesExpireKey = "com.example.autotrolej.lineExpire";
-	//trying to stupidly use enum here
-	/*public enum Days {
-		RADNI_DAN, SUBOTA, NEDELJA
-	}
-
-	public enum Category {
-		GRADSKI, PRIGRADSKI, NOCNI
-	}
-	Days days;
-	Category category;*/
+	private final static int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
+	private final static int DEFAULT_ZOOM = 13;
+	private static final String KEY_CAMERA_POSITION = "camera_position";
+	private static final String KEY_LOCATION = "location";
     //databaseHelper db;
     OrmLiteDatabaseHelper db;
+	Boolean mLocationPermissionGranted = false;
+	private Location mLastKnownLocation;
+	private CameraPosition mCameraPosition;
+	private GoogleApiClient.OnConnectionFailedListener onConnectionFailedListener;
 
-    @Override
+	@Override
     protected void onCreate(Bundle savedInstanceState) {
         //mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_maps);
+		setContentView(R.layout.activity_maps);
+
+		// Build the Play services client for use by the Fused Location Provider and the Places API.
+		// Use the addApi() method to request the Google Places API and the Fused Location Provider.
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+				.addConnectionCallbacks((GoogleApiClient.ConnectionCallbacks) this)
+				.addApi(LocationServices.API)
+				.addApi(Places.GEO_DATA_API)
+				.addApi(Places.PLACE_DETECTION_API)
+				.build();
+		mGoogleApiClient.connect();
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+
         urlList = new ArrayList<String>();
 		urlList.add(urlStanice);
         urlList.add(urlLinije);
     }
+
+	@Override
+	protected void onStart() {
+		super.onStart();
+	}
+
+
+    @Override
+	protected void onStop(){
+		super.onStop();
+		mGoogleApiClient.disconnect();
+	}
+
+
+	/**
+	 * Builds the map when the Google Play services client is successfully connected.
+	 */
 
     /**
      * Manipulates the map once available.
@@ -90,9 +130,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
 
         // Add a marker in Sydney and move the camera
+		/*
         LatLng sydney = new LatLng(-34, 151);
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+		*/
         //autotrolej = new autotrolej();
         //asyncTask = new autotrolej.jsonTask(urlList);
        //asyncTask.delegate = this;
@@ -109,6 +151,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			Intent intent = new Intent(this, parseDataIntentService.class);
 			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
 			startService(intent);
+		}
+
+		// Turn on the My Location layer and the related control on the map.
+		updateLocationUI();
+
+		// Get the current location of the device and set the position of the map.
+		getDeviceLocation();
+
+		/*
+			map draw part - for test purposes.
+		*/
+		if (db.getWritableDatabase() != null) {
+
 		}
 
 		/*
@@ -269,6 +324,101 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		//close connections and release DAO objects.
 		db.close();
+	}
+
+	private void updateLocationUI() {
+		if (mMap == null) {
+			return;
+		}
+
+		 /*
+		 * Request location permission, so that we can get the location of the
+		 * device. The result of the permission request is handled by a callback,
+		 * onRequestPermissionsResult.
+		 */
+		 Log.i("updateLocationUI", String.valueOf(PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION));
+		if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
+				android.Manifest.permission.ACCESS_FINE_LOCATION)
+				== PackageManager.PERMISSION_GRANTED) {
+			mLocationPermissionGranted = true;
+		} else {requestPermissions(new String[]{android.Manifest.permission
+						.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+		}
+
+		if (mLocationPermissionGranted) {
+			mMap.setMyLocationEnabled(true);
+			mMap.getUiSettings().setMyLocationButtonEnabled(true);
+		} else {
+			mMap.setMyLocationEnabled(false);
+			mMap.getUiSettings().setMyLocationButtonEnabled(false);
+		}
+
+	}
+
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode,
+										   @NonNull String permissions[],
+										   @NonNull int[] grantResults) {
+		mLocationPermissionGranted = false;
+		switch (requestCode) {
+			case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
+				// If request is cancelled, the result arrays are empty.
+				if (grantResults.length > 0
+						&& grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+					mLocationPermissionGranted = true;
+				} else {
+					Log.w("errorPermission", "couldn't obtian permission :".concat
+							(String.valueOf(grantResults)));
+				}
+			}
+		}
+		updateLocationUI();
+	}
+
+	private void getDeviceLocation() {
+
+		 /*
+		 * Before getting the device location, you must check location
+		 * permission, Then: Get the best and most recent location of the device,
+		 * which may be null in rare cases when a location is not available.
+		 */
+		if (mLocationPermissionGranted) {
+			mLastKnownLocation = LocationServices.FusedLocationApi
+					.getLastLocation(mGoogleApiClient);
+		}
+
+		// Set the map's camera position to the current location of the device.
+		if (mCameraPosition != null) {
+			mMap.moveCamera(CameraUpdateFactory.newCameraPosition(mCameraPosition));
+		} else if (mLastKnownLocation != null) {
+			mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+					new LatLng(mLastKnownLocation.getLatitude(),
+							mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
+		} else {
+			/*
+				CAN'T GET CURRENT LOCATION
+			 */
+			Log.w(TAG, "Current location is null..");
+		}
+	}
+
+
+	@Override
+	public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+		Log.w("ConnectioNfailed", "Connection failed :".concat(String.valueOf(connectionResult)));
+	}
+
+	@Override
+	public void onConnected(@Nullable Bundle bundle) {
+		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+				.findFragmentById(R.id.map);
+		mapFragment.getMapAsync(this);
+	}
+
+	@Override
+	public void onConnectionSuspended(int i) {
+
 	}
 
 }
