@@ -59,7 +59,7 @@ import static java.lang.Boolean.TRUE;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
 		GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
-		LocationSource, autotrolej.asyncResponse{
+		autotrolej.asyncResponse{
 
 	long startTime = System.currentTimeMillis();
     private GoogleMap mMap;
@@ -481,16 +481,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	public void onConnectionSuspended(int i) {
 
 	}
-
-	@Override
-	public void activate(OnLocationChangedListener onLocationChangedListener) {
-
-	}
-
-	@Override
-	public void deactivate() {
-
-	}
-
 }
 

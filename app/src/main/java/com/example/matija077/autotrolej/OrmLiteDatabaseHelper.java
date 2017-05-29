@@ -1,26 +1,22 @@
 package com.example.matija077.autotrolej;
 
-import android.app.ActionBar;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
-import android.nfc.Tag;
 import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.VisibleRegion;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
 import com.j256.ormlite.dao.Dao;
-import com.j256.ormlite.stmt.PreparedDelete;
 import com.j256.ormlite.stmt.PreparedQuery;
 import com.j256.ormlite.stmt.QueryBuilder;
 import com.j256.ormlite.stmt.Where;
-import com.j256.ormlite.stmt.query.In;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 
@@ -213,23 +209,30 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		return station;
 	}
 
+	/*
+		query for all stations inside a visible rectangle representing visible map part given bye
+		visibleRegion.latLngBounds method. we must query all unfortunately and we check for each
+		station if it is inside of rectangle.
+	*/
 	public List<Station> queryStation_specific2(VisibleRegion visibleRegion) {
 		List<Station> stations = new ArrayList<Station>();
+		List<Station> returnedStations = new ArrayList<Station>();
 		try {
-			Station Kudeji;
-			Kudeji = stationDao.queryBuilder().where().eq("name", "Kudeji A").queryForFirst();
-
-			QueryBuilder<Station, Integer> queryBuilder = stationDao.queryBuilder();
-			Where where = queryBuilder.where();
-			where.between("gpsx", visibleRegion.farLeft.longitude,
-					visibleRegion.farRight.longitude);
-			where.and();
-			where.between("gpsy", visibleRegion.nearLeft.latitude, visibleRegion.farLeft.latitude);
-			stations = queryBuilder.query();
+			LatLngBounds latLngBounds = visibleRegion.latLngBounds;
+			stations = stationDao.queryForAll();
+			for (Station station : stations) {
+				LatLng latLng = new LatLng(station.getGpsy(), station.getGpsx());
+				if (latLngBounds.contains(latLng)) {
+					returnedStations.add(station);
+				}
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		return stations;
+		stations = null;
+		return returnedStations;
 	}
 
 	//route
