@@ -1,50 +1,35 @@
 package com.example.matija077.autotrolej;
 
-import android.Manifest;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationManager;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentController;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.os.ResultReceiver;
 import android.util.Log;
-import android.widget.Toast;
 
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.BooleanResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.LocationSource;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -54,6 +39,7 @@ import java.util.List;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 
+import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 
 
@@ -65,9 +51,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
 	private GoogleApiClient mGoogleApiClient;
     private static final String TAG = MapsActivity.class.getSimpleName();
+	/*
     autotrolej autotrolej = null;
     List<String> data = new ArrayList<String>();
     autotrolej.jsonTask asyncTask = null;
+    */
+	ArrayList<MarkerOptions> markerOptionsList = new ArrayList<MarkerOptions>();
     List<String> urlList = null;
     static final String urlStanice = "http://e-usluge2.rijeka.hr/OpenData/ATstanice.json";
     static final String urlLinije = "http://e-usluge2.rijeka.hr/OpenData/ATlinije.json";
@@ -77,11 +66,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private final static int DEFAULT_ZOOM = 16;
 	private static final String KEY_CAMERA_POSITION = "camera_position";
 	private static final String KEY_LOCATION = "location";
-    //databaseHelper db;
     OrmLiteDatabaseHelper db;
 	Boolean mLocationPermissionGranted = false;
 	private Location mLastKnownLocation;
 	private CameraPosition mCameraPosition;
+	private Location mCurrentLocation;
+	private Boolean stateReset = FALSE;
 	private GoogleApiClient.OnConnectionFailedListener onConnectionFailedListener;
 	/*
 	log TAG constant and Log switch
@@ -91,6 +81,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
+		/*
+			if saveInstanceState is not equal to null then we need to rebuild our last known
+			location and markers. Also we need to know if state was reset in drawStations() method
+			so we use stateReset variable and clean all existing data that we will be fetching from
+			savedInstanceState.
+		*/
+		mCurrentLocation = null;
+		mCameraPosition = null;
+		markerOptionsList.clear();
+		if (savedInstanceState != null) {
+			mCurrentLocation = savedInstanceState.getParcelable("location");
+			mCameraPosition = savedInstanceState.getParcelable("camera_position");
+			markerOptionsList = savedInstanceState.getParcelableArrayList("stations");
+			stateReset = TRUE;
+		}
         //mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
         super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
@@ -287,9 +292,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	}
 
 	private void drawStations() {
+		if ((markerOptionsList.size() >= 1) && (stateReset)) {
+			for (int i = 0; i < markerOptionsList.size(); i++) {
+				mMap.addMarker(markerOptionsList.get(i));
+			}
+			/*
+				this needs to be here or it will never go down this code.
+			*/
+			stateReset = FALSE;
+			return;
+		}
 		/*
-			TODO: fix the bug with resize or changing configuration options.
+			TODOFIXED: fix the bug with resize or changing configuration options.
+			clearing marker options before adding any more when window was not resized.
 		 */
+		markerOptionsList.clear();
 		Projection projection = null;
 		try {
 			projection = mMap.getProjection();
@@ -309,7 +326,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 					LatLng latLng = new LatLng(stations.get(i).getGpsy(),
 							stations.get(i).getGpsx());
 					String stationName = stations.get(i).getName();
-					mMap.addMarker(new MarkerOptions().position(latLng).title(stationName));
+					MarkerOptions markerOptions = new MarkerOptions().position(latLng)
+							.title(stationName);
+					mMap.addMarker(markerOptions);
+					markerOptionsList.add(markerOptions);
 				}
 			}
 			if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(stations));
@@ -445,8 +465,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		 * which may be null in rare cases when a location is not available.
 		 */
 		if (mLocationPermissionGranted) {
-			mLastKnownLocation = LocationServices.FusedLocationApi
-					.getLastLocation(mGoogleApiClient);
+			if (mCurrentLocation != null) {
+				mLastKnownLocation = mCurrentLocation;
+			} else {
+				mLastKnownLocation = LocationServices.FusedLocationApi
+						.getLastLocation(mGoogleApiClient);
+			}
 		}
 
 		// Set the map's camera position to the current location of the device.
@@ -480,6 +504,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	@Override
 	public void onConnectionSuspended(int i) {
 
+	}
+
+	@Override
+	public void  onSaveInstanceState(Bundle outState) {
+		outState.putParcelableArrayList("stations", markerOptionsList);
+		outState.putParcelable("location", mLastKnownLocation);
+		outState.putParcelable("camera_position", mMap.getCameraPosition());
 	}
 }
 
