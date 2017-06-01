@@ -218,7 +218,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		List<Station> stations = new ArrayList<Station>();
 		List<Station> returnedStations = new ArrayList<Station>();
 		try {
-			LatLngBounds latLngBounds = visibleRegion.latLngBounds; // behaviour
+			LatLngBounds latLngBounds = visibleRegion.latLngBounds;
 			stations = stationDao.queryForAll();
 			for (Station station : stations) {
 				LatLng latLng = new LatLng(station.getGpsy(), station.getGpsx());

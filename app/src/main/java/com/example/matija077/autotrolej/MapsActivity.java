@@ -74,6 +74,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 	private Location mCurrentLocation;
 	private Boolean stateReset = FALSE;
 	private GoogleApiClient.OnConnectionFailedListener onConnectionFailedListener;
+	private Marker lastOpened = null;
 	/*
 	log TAG constant and Log switch
 	*/
@@ -173,6 +174,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
 			startService(intent);
 		}
+
+		/*
+			override default behaviour of centering map whenever user clicks marker.
+			Return True means that we suppress default behaviour so it doesn't happen. Also we
+			need to handle opening info windows now.
+		*/
+		mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+			@Override
+			public boolean onMarkerClick(Marker marker) {
+				// is there na open window
+				if (lastOpened != null) {
+					// if there is closed it
+					lastOpened.hideInfoWindow();
+
+					// check if this marker is the same that was already open
+					if (lastOpened.equals(marker)) {
+						//	if it is we don't want to open it again
+						lastOpened = null;
+						return true;
+					}
+				}
+
+				marker.showInfoWindow();
+				lastOpened = marker;
+				return  true;
+			}
+		});
 
 		// Turn on the My Location layer and the related control on the map.
 		updateLocationUI();
@@ -300,7 +328,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				mMap.addMarker(markerOptionsList.get(i));
 			}
 			/*
-				this needs to be here or it will never go down this code. behaves wether
+				this needs to be here or it will never go down this code.
 			*/
 			stateReset = FALSE;
 			return;
@@ -324,18 +352,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			mMap.addCircle(new CircleOptions().center(visibleRegion.nearLeft).radius(150));
 			mMap.addCircle(new CircleOptions().center(visibleRegion.nearRight).radius(150));
 			List<Station> stations = db.queryStation_specific2(visibleRegion);
-			if (stations != null) {
-				for (int i=0; i < stations.size(); i++) {
-					LatLng latLng = new LatLng(stations.get(i).getGpsy(),
-							stations.get(i).getGpsx());
-					String stationName = stations.get(i).getName();
-					MarkerOptions markerOptions = new MarkerOptions().position(latLng)
-							.title(stationName);
-					mMap.addMarker(markerOptions);
-					markerOptionsList.add(markerOptions);
-				}
-			}
 			if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(stations));
+
 			List<List<Station_route>> listOfStation_routeLists = new ArrayList<List<Station_route>>();
 			for (int i = 0; i < stations.size(); i++){
 				try {
@@ -346,10 +364,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 					e.printStackTrace();
 				}
 			}
+
+			if (stations != null) {
+				for (int i=0; i < stations.size(); i++) {
+					String allRouteMarks = "-";
+					for (Station_route station_route : listOfStation_routeLists.get(i)) {
+						try {
+							allRouteMarks = allRouteMarks + station_route.getRoute().getRouteMark()
+									.concat(" | ");
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+					LatLng latLng = new LatLng(stations.get(i).getGpsy(),
+							stations.get(i).getGpsx());
+					String stationName = stations.get(i).getName();
+					MarkerOptions markerOptions = new MarkerOptions().position(latLng)
+							.title(allRouteMarks);
+					mMap.addMarker(markerOptions);
+					markerOptionsList.add(markerOptions);
+				}
+			}
 		} else {
 			Log.i(TAG_onMapReady2, "projection is null");
 		}
 	}
+
 
     //trying database
 

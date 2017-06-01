@@ -448,8 +448,10 @@ public class parseDataIntentService extends IntentService {
 											*/
 											//station_routes.add(station_route);
 											insertStationRoute(station_route);
-											Log.i("Route station", String.valueOf(i)
-													.concat(String.valueOf(station_route)));
+											if (MapsActivity.DebugOn) {
+												Log.i("Route station", String.valueOf(i)
+														.concat(String.valueOf(station_route)));
+											}
 										} catch (Exception e) {
 											e.printStackTrace();
 										}
@@ -465,7 +467,7 @@ public class parseDataIntentService extends IntentService {
 							station routes. To know when to do it we save a 30 days ahead date
 							in shared preferences.
 						*/
-						station_routes = db.getAllStation_routes();
+						// station_routes = db.getAllStation_routes();
 						db.close();
 						//	garbage collector.
 						jsonArray = null;
