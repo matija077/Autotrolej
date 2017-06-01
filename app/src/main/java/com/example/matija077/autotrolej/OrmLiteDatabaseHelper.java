@@ -420,7 +420,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 	}
 
 	public Station_route queryStation_route_specific1(String stationId, String routeMarkValue,
-													  Character direction) {
+													  Character direction, Boolean fill) {
 		Station_route station_route = null;
 		try {
 			QueryBuilder<Station_route, Integer> queryBuilderStation_route = station_routeDao.
@@ -435,6 +435,16 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+
+		if (fill == Boolean.TRUE && station_route != null) {
+			try {
+				routeDao.refresh(station_route.getRoute());
+				stationDao.refresh(station_route.getStation());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+
 		return station_route;
 	}
 

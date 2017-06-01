@@ -65,6 +65,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     List<String> urlList = null;
     static final String urlStanice = "http://e-usluge2.rijeka.hr/OpenData/ATstanice.json";
     static final String urlLinije = "http://e-usluge2.rijeka.hr/OpenData/ATlinije.json";
+	static final String urlNedelja = "http://e-usluge2.rijeka.hr/OpenData/ATvoznired-nedjelja.json";
 	static final String preferenceName = "com.example.autotrolej.PREFERENCE_FILE_KEY";
 	static final String linesExpireKey = "com.example.autotrolej.lineExpire";
 	private final static int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
@@ -121,6 +122,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         urlList = new ArrayList<String>();
 		urlList.add(urlStanice);
         urlList.add(urlLinije);
+		urlList.add(urlNedelja);
     }
 
 	@Override
@@ -178,6 +180,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
 			startService(intent);
 		}
+
+		/*
+			schedule here
+		*/
+		db.clear();
+		urlList.clear();
+		urlList.add(urlNedelja);
+		Intent intent = new Intent(this, parseScheduleDataIntentService.class);
+		intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
+		startService(intent);
 
 		/*
 			override default behaviour of centering map whenever user clicks marker.

@@ -330,7 +330,7 @@ public class parseDataIntentService extends IntentService {
 											(parsedLinVarId.get(2));
 									station_route = queryStation_route_specific1(jsonObject.
 											getString("StanicaId"), routeMark,
-											parsedLinVarId.get(1));
+											parsedLinVarId.get(1), FALSE);
 									if (station_route != null) {
 										continue;
 									}
@@ -534,9 +534,9 @@ public class parseDataIntentService extends IntentService {
 	}
 
 	private Station_route queryStation_route_specific1(String stanicaId, String routeMarkValue,
-													   String direction) {
+													   String direction, Boolean fill) {
 		Station_route station_route = db.queryStation_route_specific1(stanicaId, routeMarkValue,
-				direction.charAt(0));
+				direction.charAt(0), fill);
 		return station_route;
 	}
 
