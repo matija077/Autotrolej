@@ -30,6 +30,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
 
+import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -160,11 +161,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		//doDatabase();
 
 		db = new OrmLiteDatabaseHelper(getApplicationContext());
+		List<Station_route> station_routes = db.queryStation_route_specific2("21-3");
 
 		/*
 		should we get all stations, routes and station routes? if we do we clear db.
 		*/
 		if (shouldWeParse()) {
+		//if (TRUE) {
 			db.clear();
 			Intent intent = new Intent(this, parseDataIntentService.class);
 			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
@@ -297,7 +300,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				mMap.addMarker(markerOptionsList.get(i));
 			}
 			/*
-				this needs to be here or it will never go down this code.
+				this needs to be here or it will never go down this code. behaves wether
 			*/
 			stateReset = FALSE;
 			return;
@@ -333,6 +336,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				}
 			}
 			if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(stations));
+			List<List<Station_route>> listOfStation_routeLists = new ArrayList<List<Station_route>>();
+			for (int i = 0; i < stations.size(); i++){
+				try {
+					listOfStation_routeLists.add(db.queryStation_route_specific3(stations.get(i)));
+				} catch (SQLException e) {
+					e.printStackTrace();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 		} else {
 			Log.i(TAG_onMapReady2, "projection is null");
 		}

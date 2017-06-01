@@ -218,7 +218,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		List<Station> stations = new ArrayList<Station>();
 		List<Station> returnedStations = new ArrayList<Station>();
 		try {
-			LatLngBounds latLngBounds = visibleRegion.latLngBounds;
+			LatLngBounds latLngBounds = visibleRegion.latLngBounds; // behaviour
 			stations = stationDao.queryForAll();
 			for (Station station : stations) {
 				LatLng latLng = new LatLng(station.getGpsy(), station.getGpsx());
@@ -448,6 +448,31 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+
+		for (Station_route station_route : station_routes) {
+			try {
+				routeDao.refresh(station_route.getRoute());
+				stationDao.refresh(station_route.getStation());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return station_routes;
+	}
+
+	public List<Station_route> queryStation_route_specific3(Station station) throws SQLException {
+		if (station == null) {
+			return null;
+		}
+
+		List<Station_route> station_routes = new ArrayList<Station_route>();
+		station_routes = station_routeDao.queryForEq("station_id", station.getId());
+
+		for (Station_route station_route : station_routes) {
+			routeDao.refresh(station_route.getRoute());
+			stationDao.refresh(station_route.getStation());
+		}
+
 		return station_routes;
 	}
 
