@@ -98,19 +98,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
        //asyncTask.delegate = this;
         //asyncTask.execute(urlList);
 		//doDatabase();
-
+/*
 		db = new OrmLiteDatabaseHelper(getApplicationContext());
 
-		/*
-		should we get all stations, routes and station routes? if we do we clear db.
-		*/
+
+		//should we get all stations, routes and station routes? if we do we clear db.
+
 		if (shouldWeParse()) {
 			db.clear();
 			Intent intent = new Intent(this, parseDataIntentService.class);
 			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
 			startService(intent);
 		}
-
+*/
 		/*
 		long endTime   = System.currentTimeMillis()/1000;
 		long totalTime = endTime - startTime;

@@ -13,4 +13,9 @@
     <string name="keyParam">key</string>
     <string name="urlStanice">http://e-usluge2.rijeka.hr/OpenData/ATstanice.json</string>
     <string name="urlLinije">http://e-usluge2.rijeka.hr/OpenData/ATlinije.json</string>
+
+    <string name="btnVozni_red">Vozni red</string>
+    <string name="btnKarta">Karta</string>
+    <string name="btnOpcije">Opcije</string>
+    <string name="btnIzlaz">Izlaz</string>
 </resources>

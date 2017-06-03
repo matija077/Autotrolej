@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <dimen name="padding">5dp</dimen>
+    <dimen name="titleSize">30dp</dimen>
+    <dimen name="btnTextSize">24dp</dimen>
+
+    <dimen name="listHeader">20dp</dimen>
+    <dimen name="listItem">16dp</dimen>
+
+</resources>

@@ -5,7 +5,7 @@ android {
     buildToolsVersion "25.0.2"
     defaultConfig {
         applicationId "com.example.matija077.autotrolej"
-        minSdkVersion 23
+        minSdkVersion 19
         targetSdkVersion 25
         versionCode 1
         versionName "1.0"
@@ -24,9 +24,10 @@ dependencies {
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
+    compile files('libs/ormlite-core-5.0.jar')
+    compile files('libs/ormlite-android-5.0.jar')
     compile 'com.android.support:appcompat-v7:25.3.0'
     compile 'com.google.android.gms:play-services-maps:10.2.0'
+    compile 'com.android.support.constraint:constraint-layout:1.0.2'
     testCompile 'junit:junit:4.12'
-    compile files ('libs/ormlite-core-5.0.jar')
-    compile files ('libs/ormlite-android-5.0.jar')
 }
