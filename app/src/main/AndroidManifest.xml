@@ -45,6 +45,12 @@
             android:name=".parseDataIntentService"
             android:exported="false">
         </service>
+
+        <service
+            android:name=".parseScheduleDataIntentService"
+            android:exported="false">
+
+        </service>
     </application>
 
 </manifest>

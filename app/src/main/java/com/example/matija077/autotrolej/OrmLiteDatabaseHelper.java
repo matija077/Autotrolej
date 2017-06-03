@@ -166,6 +166,27 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 	}
 
+	public void insertStation(List<Station> st) {
+
+		List<Station> stations = new ArrayList<Station>();
+		stations = st;
+
+		try {
+			stationDao = getStationDao();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			for (Station station : stations) {
+				stationDao.create(station);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("insertStaton()", "Error inserting station in database");
+		}
+	}
+
 	public void deleteStation(Station st) {
 		Station station = new Station();
 		station = st;
