@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/activity_settings"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/padding"
+    android:paddingLeft="@dimen/padding"
+    android:paddingRight="@dimen/padding"
+    android:paddingTop="@dimen/padding"
+    android:background="@drawable/background"
+
+    tools:context="com.example.matija077.autotrolej.TimeTableActivity">
+
+    <ImageButton
+        android:id="@+id/btnBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:srcCompat="?attr/actionModeCloseDrawable"/>
+
+    <TextView
+        android:id="@+id/txtTimeTable"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/btnOpcije"
+        android:textSize="@dimen/titleSize"
+        android:textColor="@color/white"
+        android:textStyle="bold"
+        android:layout_alignBottom="@+id/btnBack"
+        android:layout_centerHorizontal="true" />
+
+    <ExpandableListView
+        android:id="@+id/expList"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/txtTimeTable"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="40dp" />
+</RelativeLayout>

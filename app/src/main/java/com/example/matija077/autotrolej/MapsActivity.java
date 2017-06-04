@@ -173,24 +173,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 		db = new OrmLiteDatabaseHelper(getApplicationContext());
 		List<Station_route> station_routes = db.queryStation_route_specific2("21-3");
+		List<Station_route> station_routes2 = db.queryStation_route_specific2("21-7");
+
+
 
 		/*
 		should we get all stations, routes and station routes? if we do we clear db.
 		*/
-		//if (shouldWeParse()) {
-		/*if (TRUE) {
+		if (shouldWeParse()) {
+		//if (TRUE) {
 			db.clear();
 			Intent intent = new Intent(this, parseDataIntentService.class);
 			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
 			startService(intent);
-		}*/
+		}
 
 		/*
 			schedule here
 		*/
 
 		//db.clear();
-		/*Intent intent = new Intent(this, parseScheduleDataIntentService.class);
+		/**Intent intent = new Intent(this, parseScheduleDataIntentService.class);
 		intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
 		startService(intent);*/
 
@@ -503,7 +506,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				android.Manifest.permission.ACCESS_FINE_LOCATION)
 				== PackageManager.PERMISSION_GRANTED) {
 			mLocationPermissionGranted = true;
-		} else {requestPermissions(new String[]{android.Manifest.permission
+		} else  {requestPermissions(new String[]{android.Manifest.permission
 						.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
 		}
 
