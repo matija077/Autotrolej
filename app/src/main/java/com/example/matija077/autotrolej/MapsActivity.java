@@ -122,9 +122,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
 
         urlList = new ArrayList<String>();
-		urlList.add(urlRadniDan);
-        /*urlList.add(urlSubota);
-		urlList.add(urlNedelja);*/
+		/*urlList.add(urlRadniDan);
+      	urlList.add(urlSubota);*/
+		urlList.add(urlNedelja);
 		/*urlList.add(urlStanice);
 		urlList.add(urlLinije);*/
     }
@@ -190,9 +190,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		*/
 
 		//db.clear();
-		Intent intent = new Intent(this, parseScheduleDataIntentService.class);
+		/*Intent intent = new Intent(this, parseScheduleDataIntentService.class);
 		intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
-		startService(intent);
+		startService(intent);*/
+
+		try {
+			List<Schedule> schedules = db.getAllSchedules();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 
 		/*
