@@ -17,6 +17,7 @@ import com.j256.ormlite.table.TableUtils;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 
@@ -360,6 +361,26 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			Log.e("insertRoute()", "Error inserting route in database");
 		}
 	}
+
+	public void insertSchedule(HashSet<Schedule> s) {
+		HashSet<Schedule> schedules = s;
+
+		try {
+			scheduleDao = getScheduleDao();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			for (Schedule schedule : schedules) {
+				scheduleDao.create(schedule);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("insertRoute()", "Error inserting schedule in database");
+		}
+	}
+
 
 	public List<Schedule> getAllSchedules() {
 		List<Schedule> schedules = new ArrayList<Schedule>();

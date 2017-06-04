@@ -65,6 +65,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     List<String> urlList = null;
     static final String urlStanice = "http://e-usluge2.rijeka.hr/OpenData/ATstanice.json";
     static final String urlLinije = "http://e-usluge2.rijeka.hr/OpenData/ATlinije.json";
+	static final String urlRadniDan = "http://e-usluge2.rijeka.hr/OpenData/ATvoznired-tjedan.json";
+	static  final  String urlSubota = "http://e-usluge2.rijeka.hr/OpenData/ATvoznired-subota.json";
 	static final String urlNedelja = "http://e-usluge2.rijeka.hr/OpenData/ATvoznired-nedjelja.json";
 	static final String preferenceName = "com.example.autotrolej.PREFERENCE_FILE_KEY";
 	static final String linesExpireKey = "com.example.autotrolej.lineExpire";
@@ -120,9 +122,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
 
         urlList = new ArrayList<String>();
-		urlList.add(urlStanice);
-        urlList.add(urlLinije);
-		urlList.add(urlNedelja);
+		urlList.add(urlRadniDan);
+        /*urlList.add(urlSubota);
+		urlList.add(urlNedelja);*/
+		/*urlList.add(urlStanice);
+		urlList.add(urlLinije);*/
     }
 
 	@Override
@@ -173,8 +177,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		/*
 		should we get all stations, routes and station routes? if we do we clear db.
 		*/
-		/*if (shouldWeParse()) {
-		//if (TRUE) {
+		//if (shouldWeParse()) {
+		/*if (TRUE) {
 			db.clear();
 			Intent intent = new Intent(this, parseDataIntentService.class);
 			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
@@ -185,14 +189,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			schedule here
 		*/
 
-		/*db.clear();
-		urlList.clear();
-		urlList.add(urlNedelja);
+		//db.clear();
 		Intent intent = new Intent(this, parseScheduleDataIntentService.class);
 		intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
-		startService(intent);*/
+		startService(intent);
 
-		List
 
 		/*
 			override default behaviour of centering map whenever user clicks marker.
