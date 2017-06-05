@@ -1,25 +1,26 @@
 package com.example.matija077.autotrolej;
 
-import android.app.ActionBar;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
-import android.nfc.Tag;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.VisibleRegion;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
 import com.j256.ormlite.dao.Dao;
-import com.j256.ormlite.stmt.PreparedDelete;
 import com.j256.ormlite.stmt.PreparedQuery;
 import com.j256.ormlite.stmt.QueryBuilder;
 import com.j256.ormlite.stmt.Where;
-import com.j256.ormlite.stmt.query.In;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -168,6 +169,48 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 	}
 
+	public void insertStation(List<Station> st) {
+
+		List<Station> stations = new ArrayList<Station>();
+		stations = st;
+
+		try {
+			stationDao = getStationDao();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			for (Station station : stations) {
+				stationDao.create(station);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("insertStaton()", "Error inserting station in database");
+		}
+	}
+
+	public void insertStation(HashMap<String, Station> st) {
+
+		HashMap<String, Station> stations = new HashMap<>();
+		stations = st;
+
+		try {
+			stationDao = getStationDao();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		try {
+		for(Station station : stations.values()) {
+			stationDao.create(station);
+		}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("insertStaton()", "Error inserting station in database");
+		}
+	}
+
 	public void deleteStation(Station st) {
 		Station station = new Station();
 		station = st;
@@ -211,6 +254,32 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		return station;
 	}
 
+	/*
+		query for all stations inside a visible rectangle representing visible map part given bye
+		visibleRegion.latLngBounds method. we must query all unfortunately and we check for each
+		station if it is inside of rectangle.
+	*/
+	public List<Station> queryStation_specific2(VisibleRegion visibleRegion) {
+		List<Station> stations = new ArrayList<Station>();
+		List<Station> returnedStations = new ArrayList<Station>();
+		try {
+			LatLngBounds latLngBounds = visibleRegion.latLngBounds;
+			stations = stationDao.queryForAll();
+			for (Station station : stations) {
+				LatLng latLng = new LatLng(station.getGpsy(), station.getGpsx());
+				if (latLngBounds.contains(latLng)) {
+					returnedStations.add(station);
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		stations = null;
+		return returnedStations;
+	}
+
 	//route
 	public void insertRoute(Route rt) {
 		Route route = rt;
@@ -226,6 +295,27 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		} catch (SQLException e) {
 			e.printStackTrace();
 			Log.e("insertRoute()", "Error inserting route in database");
+		}
+	}
+
+	public void insertRoute(HashMap<String, Route> rt) {
+
+		HashMap<String, Route> routes = new HashMap<>();
+		routes = rt;
+
+		try {
+			routeDao = getRouteDao();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			for (Route route : routes.values()) {
+				routeDao.create(route);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("insertStaton()", "Error inserting route in database");
 		}
 	}
 
@@ -298,6 +388,18 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		return route;
 	}
 
+	public Route queryRoot_specific1(String routeMarkValue) {
+		Route route = null;
+		try {
+			QueryBuilder<Route, Integer> queryBuilder = routeDao.queryBuilder();
+			queryBuilder.where().eq("routeMark", routeMarkValue);
+			route = queryBuilder.queryForFirst();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return route;
+	}
+
 	//schedule
 	public void insertSchedule(Schedule s) {
 		Schedule schedule = s;
@@ -315,6 +417,26 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			Log.e("insertRoute()", "Error inserting route in database");
 		}
 	}
+
+	public void insertSchedule(HashSet<Schedule> s) {
+		HashSet<Schedule> schedules = s;
+
+		try {
+			scheduleDao = getScheduleDao();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			for (Schedule schedule : schedules) {
+				scheduleDao.create(schedule);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("insertRoute()", "Error inserting schedule in database");
+		}
+	}
+
 
 	public List<Schedule> getAllSchedules() {
 		List<Schedule> schedules = new ArrayList<Schedule>();
@@ -359,6 +481,25 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 	}
 
+	public void insertStation_route(HashSet<Station_route> srt) {
+		HashSet<Station_route> station_routes = srt;
+
+		try {
+			station_routeDao = getStation_routeDao();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			for(Station_route station_route : station_routes) {
+				station_routeDao.create(station_route);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("insertRoute()", "Error inserting route in database");
+		}
+	}
+
 	public Station_route getStation_routeById(Integer id) {
 		Station_route station_route = null;
 		try {
@@ -396,7 +537,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 	}
 
 	public Station_route queryStation_route_specific1(String stationId, String routeMarkValue,
-													  Character direction) {
+													  Character direction, Boolean fill) {
 		Station_route station_route = null;
 		try {
 			QueryBuilder<Station_route, Integer> queryBuilderStation_route = station_routeDao.
@@ -411,6 +552,16 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+
+		if (fill == Boolean.TRUE && station_route != null) {
+			try {
+				routeDao.refresh(station_route.getRoute());
+				stationDao.refresh(station_route.getStation());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+
 		return station_route;
 	}
 
@@ -424,7 +575,36 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+
+		for (Station_route station_route : station_routes) {
+			try {
+				routeDao.refresh(station_route.getRoute());
+				stationDao.refresh(station_route.getStation());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
 		return station_routes;
 	}
+
+	public List<Station_route> queryStation_route_specific3(Station station) throws SQLException {
+		if (station == null) {
+			return null;
+		}
+
+		List<Station_route> station_routes = new ArrayList<Station_route>();
+		station_routes = station_routeDao.queryForEq("station_id", station.getId());
+
+		for (Station_route station_route : station_routes) {
+			routeDao.refresh(station_route.getRoute());
+			stationDao.refresh(station_route.getStation());
+		}
+
+		return station_routes;
+	}
+
+	/*public List<Station_route> queryStation_route_specific3(double gpsx, double gpsy) {
+
+	}*/
 
 }

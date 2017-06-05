@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/activity_main"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:weightSum="1"
+    android:orientation="vertical"
+    android:paddingBottom="@dimen/padding"
+    android:paddingLeft="@dimen/padding"
+    android:paddingRight="@dimen/padding"
+    android:paddingTop="@dimen/padding"
+    android:background="@drawable/background"
+
+    tools:context="com.example.matija077.autotrolej.MainActivity">
+
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.1">
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.1"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/txtTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textSize="@dimen/titleSize"
+            android:textColor="@color/white"
+            android:textStyle="bold" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:layout_weight="0.6"
+        android:gravity="center"
+        >
+
+        <Button
+            android:id="@+id/btnTime_table"
+            android:text="@string/btnVozni_red"
+            style="@style/ButtonStyle" />
+
+        <Button
+            android:id="@+id/btnMap"
+            android:text="@string/btnKarta"
+            style="@style/ButtonStyle"/>
+
+        <Button
+            android:id="@+id/btnSettings"
+            android:text="@string/btnOpcije"
+            style="@style/ButtonStyle"/>
+
+        <Button
+            android:id="@+id/btnExit"
+            android:text="@string/btnIzlaz"
+            style="@style/ButtonStyle"/>
+
+
+    </LinearLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.1">
+
+    </RelativeLayout>
+</LinearLayout>
