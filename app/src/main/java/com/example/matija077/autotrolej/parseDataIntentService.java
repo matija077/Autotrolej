@@ -176,7 +176,8 @@ public class parseDataIntentService extends IntentService {
 								route for routes and direction for directionA/B, variant is needed
 							 	later
 							*/
-							String routeMarkName = jsonObject.getString("LinVarId").split("-")[0];
+							String routeMarkName = jsonObject.getString("LinVarId").split("-")[0].
+									concat("-").concat(jsonObject.getString("LinVarId").split("-")[2]);
 							String routeMarkDirection = jsonObject.getString("LinVarId")
 									.split("-")[1];
 							/*	Both "Smjer" and "routeMarkDirection" need to be the same. If not
@@ -325,12 +326,15 @@ public class parseDataIntentService extends IntentService {
 									}
 									*/
 									Station_route station_route = null;
+									String routeMark = parsedLinVarId.get(0).concat("-").concat
+											(parsedLinVarId.get(2));
 									station_route = queryStation_route_specific1(jsonObject.
-											getString("StanicaId"), parsedLinVarId.get(0),
-											parsedLinVarId.get(1));
+											getString("StanicaId"), routeMark,
+											parsedLinVarId.get(1), FALSE);
 									if (station_route != null) {
 										continue;
 									}
+									routeMark = null;
 
 
 									/*
@@ -362,8 +366,8 @@ public class parseDataIntentService extends IntentService {
 											tempConnectors);
 									*/
 
-									route = queryRoot_specific1(parsedLinVarId.get(0),
-											stationRouteName);
+									route = queryRoot_specific1(parsedLinVarId.get(0).concat("-").
+													concat(parsedLinVarId.get(2)), stationRouteName);
 									if (route == null) {
 										continue;
 									} else {
@@ -444,6 +448,10 @@ public class parseDataIntentService extends IntentService {
 											*/
 											//station_routes.add(station_route);
 											insertStationRoute(station_route);
+											if (MapsActivity.DebugOn) {
+												Log.i("Route station", String.valueOf(i)
+														.concat(String.valueOf(station_route)));
+											}
 										} catch (Exception e) {
 											e.printStackTrace();
 										}
@@ -459,7 +467,7 @@ public class parseDataIntentService extends IntentService {
 							station routes. To know when to do it we save a 30 days ahead date
 							in shared preferences.
 						*/
-						//station_routes = db.getAllStation_routes();
+						// station_routes = db.getAllStation_routes();
 						db.close();
 						//	garbage collector.
 						jsonArray = null;
@@ -526,9 +534,9 @@ public class parseDataIntentService extends IntentService {
 	}
 
 	private Station_route queryStation_route_specific1(String stanicaId, String routeMarkValue,
-													   String direction) {
+													   String direction, Boolean fill) {
 		Station_route station_route = db.queryStation_route_specific1(stanicaId, routeMarkValue,
-				direction.charAt(0));
+				direction.charAt(0), fill);
 		return station_route;
 	}
 

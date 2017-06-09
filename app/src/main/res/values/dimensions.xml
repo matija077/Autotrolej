@@ -7,5 +7,6 @@
 
     <dimen name="listHeader">20dp</dimen>
     <dimen name="listItem">16dp</dimen>
+    <dimen name="infoWindowItem">10dp</dimen>
 
 </resources>

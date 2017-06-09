@@ -43,17 +43,21 @@
         android:layout_height="0dp"
         android:layout_weight="0.4">
 
-        <ListView
-            android:id="@+id/lsStationLine"
+        <ExpandableListView
+            android:id="@+id/expList"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_alignParentStart="true" />
+            android:layout_below="@+id/txtTimeTable"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="40dp" />
     </RelativeLayout>
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="0.6">
+        android:layout_weight="0.5"
+        android:background="@color/colorPrimaryDark"
+        android:padding="2dp" >
 
         <fragment
             android:id="@+id/map"
