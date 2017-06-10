@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -122,7 +123,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
 
-        urlList = new ArrayList<String>();
+        /*urlList = new ArrayList<String>();
 		urlList.add(urlRadniDan);
       	//urlList.add(urlSubota);
 		//urlList.add(urlNedelja);
@@ -264,12 +265,77 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 			Log.i(TAG_onMapReady2, String.valueOf(db.getWritableDatabase()).concat
 					(String.valueOf(mLastKnownLocation)));
 		}
+		/*
+			schedule here
+		*/
+
+		//db.clear();
+		/**Intent intent = new Intent(this, parseScheduleDataIntentService.class);
+		intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
+		startService(intent);*/
+/*
+		try {
+			List<Schedule> schedules = db.getAllSchedules();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+*/
 
 		/*
-		long endTime   = System.currentTimeMillis()/1000;
-		long totalTime = endTime - startTime;
-		Log.i(TAG, String.valueOf(totalTime));
+			override default behaviour of centering map whenever user clicks marker.
+			Return True means that we suppress default behaviour so it doesn't happen. Also we
+			need to handle opening info windows now.
 		*/
+		mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+			@Override
+			public boolean onMarkerClick(Marker marker) {
+				// is there na open window
+				if (lastOpened != null) {
+					// if there is closed it
+					lastOpened.hideInfoWindow();
+
+					// check if this marker is the same that was already open
+					if (lastOpened.equals(marker)) {
+						//	if it is we don't want to open it again
+						lastOpened = null;
+						return true;
+					}
+				}
+
+				marker.showInfoWindow();
+				lastOpened = marker;
+				return  true;
+			}
+		});
+
+		// Turn on the My Location layer and the related control on the map.
+		updateLocationUI();
+
+		// Get the current location of the device and set the position of the map.
+		getDeviceLocation();
+
+		/*
+			map draw part - for test purposes.
+		*/
+		if ((db.getWritableDatabase() != null) && (mLastKnownLocation != null)) {
+			drawStations();
+			mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+				@Override
+				public void onCameraIdle() {
+					mMap.clear();
+					if (mMap.getCameraPosition().zoom > 14) {
+						drawStations();
+					} else {
+						/*
+							TODO: tell the user that the zoom level is to low
+						*/
+					}
+				}
+			});
+		} else {
+			Log.i(TAG_onMapReady2, String.valueOf(db.getWritableDatabase()).concat
+					(String.valueOf(mLastKnownLocation)));
+		}
     }
 
     @Override
@@ -496,6 +562,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		db.close();
 	}
 
+	@RequiresApi(api = Build.VERSION_CODES.M)
 	private void updateLocationUI() {
 		if (mMap == null) {
 			return;
@@ -514,7 +581,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		} else if (Build.VERSION.SDK_INT > 23) {requestPermissions(new String[]{android.Manifest.permission
 						.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
 		} else {
-			//	TODO: if aap under 23 SDK version and permission not granted what to do?
 		}
 
 		if (mLocationPermissionGranted) {

@@ -103,4 +103,12 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
     public boolean isChildSelectable(int groupPosition, int childPosition) {
         return true;
     }
+
+    public void setListDataHeader(List<String> list){
+        _listDataHeader = list;
+    }
+
+    public void setListDataChild(HashMap<String, List<String>> map){
+        _listDataChild = map;
+    }
 }

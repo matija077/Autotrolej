@@ -633,7 +633,6 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 	/*public List<Station_route> queryStation_route_specific3(double gpsx, double gpsy) {
 
 	}*/
-	
 
 	public void dumpDatabase2(Context context) {
 			File backupDB = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),

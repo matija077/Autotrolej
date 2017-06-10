@@ -11,7 +11,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 
 import static android.content.ContentValues.TAG;
@@ -69,7 +67,6 @@ public class parseScheduleDataIntentService extends IntentService {
 				HttpURLConnection connection = null;
 				BufferedReader reader = null;
 				//data = new ArrayList<String>();
-
 				for (int i = 0; i < urlList.size(); i++) {
 					try {
 						URL url = new URL(urlList.get(i));
@@ -107,7 +104,6 @@ public class parseScheduleDataIntentService extends IntentService {
 							e.printStackTrace();
 						}
 							Gson gson = new GsonBuilder().create();
-
 
 					} catch (MalformedURLException e) {
 						e.printStackTrace();
@@ -285,6 +281,7 @@ public class parseScheduleDataIntentService extends IntentService {
 										(parsedLinVarId.get(2));
 								station_route = db.queryStation_route_specific1(id, routeMark,
 										routeMarkDirection.charAt(0), TRUE);
+
 								if (station_route == null) {
 									/*Log.e("Error", routeMark.concat("-".concat(jsonObject.
 											getString("StanicaId"))));
