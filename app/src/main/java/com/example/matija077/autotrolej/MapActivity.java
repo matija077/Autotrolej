@@ -92,6 +92,22 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        /*
+			if saveInstanceState is not equal to null then we need to rebuild our last known
+			location and markers. Also we need to know if state was reset in drawStations() method
+			so we use stateReset variable and clean all existing data that we will be fetching from
+			savedInstanceState.
+		*/
+        mCurrentLocation = null;
+        mCameraPosition = null;
+        markerOptionsList.clear();
+        if (savedInstanceState != null) {
+            mCurrentLocation = savedInstanceState.getParcelable("location");
+            mCameraPosition = savedInstanceState.getParcelable("camera_position");
+            markerOptionsList = savedInstanceState.getParcelableArrayList("stations");
+            stateReset = TRUE;
+        }
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
 
