@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -122,9 +123,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
 
         urlList = new ArrayList<String>();
-		/*urlList.add(urlRadniDan);
-      	urlList.add(urlSubota);*/
-		urlList.add(urlNedelja);
+		urlList.add(urlRadniDan);
+      	//urlList.add(urlSubota);
+		//urlList.add(urlNedelja);
 		/*urlList.add(urlStanice);
 		urlList.add(urlLinije);*/
     }
@@ -171,37 +172,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //asyncTask.execute(urlList);
 		//doDatabase();
 
+		/*OrmLiteDatabaseHelper db = new OrmLiteDatabaseHelper(getApplicationContext());
+		db.dumpDatabase2(getApplicationContext());*/
 		db = new OrmLiteDatabaseHelper(getApplicationContext());
-		List<Station_route> station_routes = db.queryStation_route_specific2("21-3");
-		List<Station_route> station_routes2 = db.queryStation_route_specific2("21-7");
+		//List<Route> routes = db.getAllRoutes();
+		//Station_route station_route = db.queryStation_route_specific1("1795", "1-0", 'B', TRUE);
+		//List<Station_route> station_routes = db.queryStation_route_specific2("1-0");
+		//List<Station_route> station_routes2 = db.queryStation_route_specific2("21-7");
 
 
 
 		/*
 		should we get all stations, routes and station routes? if we do we clear db.
 		*/
-		if (shouldWeParse()) {
-		//if (TRUE) {
+		//if (shouldWeParse()) {
+		/*if (TRUE) {
 			db.clear();
 			Intent intent = new Intent(this, parseDataIntentService.class);
 			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
 			startService(intent);
-		}
+		}*/
 
 		/*
 			schedule here
 		*/
 
 		//db.clear();
-		/**Intent intent = new Intent(this, parseScheduleDataIntentService.class);
+		/*Intent intent = new Intent(this, parseScheduleDataIntentService.class);
 		intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
 		startService(intent);*/
 
-		try {
+		/*try {
 			List<Schedule> schedules = db.getAllSchedules();
 		} catch (Exception e) {
 			e.printStackTrace();
-		}
+		}*/
 
 
 		/*
@@ -506,8 +511,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 				android.Manifest.permission.ACCESS_FINE_LOCATION)
 				== PackageManager.PERMISSION_GRANTED) {
 			mLocationPermissionGranted = true;
-		} else  {requestPermissions(new String[]{android.Manifest.permission
+		} else if (Build.VERSION.SDK_INT > 23) {requestPermissions(new String[]{android.Manifest.permission
 						.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+		} else {
+			//	TODO: if aap under 23 SDK version and permission not granted what to do?
 		}
 
 		if (mLocationPermissionGranted) {

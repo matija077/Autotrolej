@@ -4,6 +4,14 @@ import android.app.IntentService;
 import android.content.Intent;
 import android.util.Log;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.annotations.SerializedName;
+import com.google.gson.reflect.TypeToken;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -12,13 +20,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 
 import static android.content.ContentValues.TAG;
@@ -46,15 +58,17 @@ public class parseScheduleDataIntentService extends IntentService {
 		if (intent != null) {
 			List<String> urlList = null;
 			urlList = new ArrayList<String>(intent.getStringArrayListExtra("urlList"));
-			List<String> data = null;
+			//List<String> data = null;
 			Boolean running = TRUE;
+			Type collectiontype = new TypeToken<List<jsonObject>>(){}.getType();
+			List<Collection<jsonObject>> data= new ArrayList<Collection<jsonObject>>();
 
 			if (urlList.size() <= 0) running = FALSE;
 
 			if (running == TRUE) {
 				HttpURLConnection connection = null;
 				BufferedReader reader = null;
-				data = new ArrayList<String>();
+				//data = new ArrayList<String>();
 
 				for (int i = 0; i < urlList.size(); i++) {
 					try {
@@ -64,13 +78,18 @@ public class parseScheduleDataIntentService extends IntentService {
 
 						InputStream stream = connection.getInputStream();
 
-						reader = new BufferedReader(new InputStreamReader(stream));
+						/*reader = new BufferedReader(new InputStreamReader(stream));
 
 						StringBuilder buffer = new StringBuilder();
+						buffer.ensureCapacity(52);
 						String line = "";
 
 						while ((line = reader.readLine()) != null) {
-							buffer.append(line + "\n");
+							try {
+								buffer.append(line + "\n");
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 						}
 						Log.i("ae", String.valueOf(i));
 
@@ -78,7 +97,18 @@ public class parseScheduleDataIntentService extends IntentService {
 						buffer = null;
 						line = null;
 						reader.close();
-						stream.close();
+						stream.close();*/
+						try {
+							Reader read = new InputStreamReader(stream);
+							data.add((Collection<jsonObject>) new Gson().fromJson(read, collectiontype));
+							//jsonObject result = new Gson().fromJson(read, jsonObject.class);
+							//JsonObject jsonObject = (JsonObject) new JsonParser().parse(new InputStreamReader(stream));
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+							Gson gson = new GsonBuilder().create();
+
+
 					} catch (MalformedURLException e) {
 						e.printStackTrace();
 					} catch (IOException e) {
@@ -91,28 +121,43 @@ public class parseScheduleDataIntentService extends IntentService {
 				}
 			} else {
 			}
-
+			urlList = null;
 			if (data != null) {
 				db = new OrmLiteDatabaseHelper(getApplicationContext());
 				for (int j = 0; j < data.size(); j++) {
 					HashSet<Schedule> schedules = new HashSet<Schedule>();
 					HashMap<String, Station> stations = new HashMap<String, Station>();
 					HashMap<String, Route> routes = new HashMap<String, Route>();
-					HashSet<Station_route> station_routes = new HashSet<Station_route>();
+					HashMap<String, Station_route> station_routes = new HashMap<>();
+					//HashSet<Station_route> station_routes = new HashSet<>();
 					try {
-						JSONArray jsonArray = new JSONArray(data.get(j));
+						JSONArray jsonArray = null;
+						//Type listType1 = new TypeToken<List<Collection<jsonObject>>>() {}.getType();
+						//Type listType2 = new TypeToken<JSONArray>() {}.getType();
+						Gson gson = new Gson();
+						try {
+							String json = gson.toJson(data.get(0));
+							//jsonArray = gson.fromJson(json, listType2);
+							jsonArray = new JSONArray(json);
+						} catch (Exception e) {
+							e.printStackTrace();
+						} finally {
+							data.get(0).clear();
+							gson = null;
+						}
 						String day;
-						if (j == 0) {
+						/*if (j == 0) {
 							day = "radni dan";
 						} else if (j == 1) {
 							day = "subota";
 						} else {
 							day = "nedelja";
-						}
+						}*/
+						day = "radni dan";
 
 						for (int i = 0; i < jsonArray.length(); i++) {
 
-							JSONObject jsonObject = jsonArray.getJSONObject(i);
+							JSONObject jsonObject = (JSONObject) jsonArray.get(i);
 							List<String> parsedLinVarId = new ArrayList<String>();
 
 							try {
@@ -240,37 +285,48 @@ public class parseScheduleDataIntentService extends IntentService {
 										(parsedLinVarId.get(2));
 								station_route = db.queryStation_route_specific1(id, routeMark,
 										routeMarkDirection.charAt(0), TRUE);
-
 								if (station_route == null) {
 									/*Log.e("Error", routeMark.concat("-".concat(jsonObject.
 											getString("StanicaId"))));
 									continue;*/
-									Boolean turnAroundStation = FALSE;
-									String stationNumber = jsonObject.getString("RedniBrojStanice");
-									if (route != null && station != null && routeMarkDirection != null &&
-											stationNumber != null) {
-										try {
-											station_route = new Station_route(station,
-													route, routeMarkDirection.charAt(0), turnAroundStation,
-													stationNumber);
+										Boolean turnAroundStation = FALSE;
+										String stationNumber = jsonObject.getString("RedniBrojStanice");
+										if (route != null && station != null && routeMarkDirection != null &&
+												stationNumber != null) {
+											try {
+												/*station_route = new Station_route(station,
+														route, routeMarkDirection.charAt(0), turnAroundStation,
+														stationNumber);*/
 											/*
 											we want to add in db our station_route and than query it
 											when checking
 											*/
-											//station_routes.add(station_route);
-											if (!station_routes.contains(station_route)) {
-												station_routes.add(station_route);
+												String station_routeKey = routeMark.concat("-").
+														concat(routeMarkDirection).concat("-").
+														concat(id);
+												if (!station_routes.containsKey(station_routeKey)) {
+												//if (! station_routes.contains(station_route)) {
+													station_route = new Station_route(station,
+														route, routeMarkDirection.charAt(0), turnAroundStation,
+														stationNumber);
+													station_routes.put(station_routeKey, station_route);
+												} else {
+													//Log.d("tag", String.valueOf(station_route));
+													station_route = station_routes.get(station_routeKey);
+												}
+												if (MapsActivity.DebugOn) {
+													Log.i("Route station", String.valueOf(i)
+															.concat(String.valueOf(station_route)));
+												}
+											} catch (Exception e) {
+												e.printStackTrace();
 											}
-											if (MapsActivity.DebugOn) {
-												Log.i("Route station", String.valueOf(i)
-														.concat(String.valueOf(station_route)));
-											}
-										} catch (Exception e) {
-											e.printStackTrace();
+										} else {
+											Log.e(TAG, String.valueOf(i));
 										}
-									} else {
-										Log.e(TAG, String.valueOf(i));
-									}
+									/*} else {
+										routeMark = null;
+									}*/
 								} else {
 									routeMark = null;
 								}
@@ -311,5 +367,34 @@ public class parseScheduleDataIntentService extends IntentService {
 				}
 			}
 		}
+	}
+
+	private class jsonObject {
+		@SerializedName("LinVarId")
+		private String LinVarId;
+
+		@SerializedName("StanicaId")
+		private String id;
+
+		@SerializedName("Naziv")
+		private String Name;
+
+		@SerializedName("GpsX")
+		private String gpsx;
+
+		@SerializedName("GpsY")
+		private String gpsy;
+
+		@SerializedName("Smjer")
+		private String direction;
+
+		@SerializedName("NazivVarijanteLinije")
+		private  String directionName;
+
+		@SerializedName("RedniBrojStanice")
+		private String stationNumber;
+
+		@SerializedName("Polazak")
+		private String date;
 	}
 }

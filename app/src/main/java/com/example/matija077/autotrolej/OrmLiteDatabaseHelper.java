@@ -2,7 +2,9 @@ package com.example.matija077.autotrolej;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Environment;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
@@ -15,6 +17,12 @@ import com.j256.ormlite.stmt.Where;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -202,9 +210,9 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 
 		try {
-		for(Station station : stations.values()) {
-			stationDao.create(station);
-		}
+			for (Station station : stations.values()) {
+				stationDao.create(station);
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 			Log.e("insertStaton()", "Error inserting station in database");
@@ -247,7 +255,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		Station station = null;
 		try {
 			station = stationDao.queryBuilder()
-								.where().eq("id", id).queryForFirst();
+					.where().eq("id", id).queryForFirst();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -374,11 +382,11 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			QueryBuilder<Route, Integer> queryBuilder = routeDao.queryBuilder();
 			Where<Route, Integer> where = queryBuilder.where();
 			where.and(
-				where.eq("routeMark", routeMarkValue),
-				where.or(
-					where.eq("directionA", directionValue),
-					where.eq("directionB", directionValue)
-				)
+					where.eq("routeMark", routeMarkValue),
+					where.or(
+							where.eq("directionA", directionValue),
+							where.eq("directionB", directionValue)
+					)
 			);
 			//PreparedQuery<Route> preparedQuery = queryBuilder.prepare();
 			route = queryBuilder.queryForFirst();
@@ -449,7 +457,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 
 		try {
-			for (int i= 0; i < schedules.size(); i++) {
+			for (int i = 0; i < schedules.size(); i++) {
 				station_routeDao.refresh(schedules.get(i).getStation_route());
 				Station_route station_route = schedules.get(i).getStation_route();
 				stationDao.refresh(station_route.getStation());
@@ -491,7 +499,26 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 
 		try {
-			for(Station_route station_route : station_routes) {
+			for (Station_route station_route : station_routes) {
+				station_routeDao.create(station_route);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Log.e("insertRoute()", "Error inserting route in database");
+		}
+	}
+
+	public void insertStation_route(HashMap<String, Station_route> srt) {
+		HashMap<String, Station_route> station_routes = srt;
+
+		try {
+			station_routeDao = getStation_routeDao();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			for (Station_route station_route : station_routes.values()) {
 				station_routeDao.create(station_route);
 			}
 		} catch (SQLException e) {
@@ -524,7 +551,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 
 		try {
-			for (int i= 0; i < station_routes.size(); i++) {
+			for (int i = 0; i < station_routes.size(); i++) {
 				stationDao.refresh(station_routes.get(i).getStation());
 				routeDao.refresh(station_routes.get(i).getRoute());
 			}
@@ -606,5 +633,26 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 	/*public List<Station_route> queryStation_route_specific3(double gpsx, double gpsy) {
 
 	}*/
+	
 
+	public void dumpDatabase2(Context context) {
+			File backupDB = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+					"bAR.db"); // for example "my_data_backup.db"
+			File currentDB = context.getDatabasePath("autotorlej.db");
+			if (currentDB.exists()) {
+				FileChannel src = null;
+				try {
+					src = new FileInputStream(currentDB).getChannel();
+					FileChannel dst = new FileOutputStream(backupDB).getChannel();
+					dst.transferFrom(src, 0, src.size());
+					src.close();
+					dst.close();
+				} catch (FileNotFoundException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+	}
 }
+
