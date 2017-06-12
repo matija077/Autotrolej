@@ -268,10 +268,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         mMap.setInfoWindowAdapter(infoWindow);
 
-        LatLng okretiste = new LatLng(45.35, 14.39);
-        googleMap.addMarker(new MarkerOptions().position(okretiste).title("Turkovo")
-                .icon(BitmapDescriptorFactory.fromBitmap(
-                        resizeMapIcon("bus_station", 100, 100))));
+        db = new OrmLiteDatabaseHelper(getApplicationContext());
+
 
         /*
 			override default behaviour of centering map whenever user clicks marker.
@@ -308,7 +306,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         // Get the current location of the device and set the position of the map.
         getDeviceLocation();
 
-/*        if ((db.getWritableDatabase() != null) && (mLastKnownLocation != null)) {
+        if ((db.getWritableDatabase() != null) && (mLastKnownLocation != null)) {
             drawStations();
             mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
                 @Override
@@ -320,13 +318,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 						/*
 							TODO: tell the user that the zoom level is to low
 						*/
-/*					}
+    				}
 				}
 			});
 		} else {
 			Log.i(TAG_onMapReady2, String.valueOf(db.getWritableDatabase()).concat
 					(String.valueOf(mLastKnownLocation)));
-		}*/
+		}
     }
 
     private void drawStations() {

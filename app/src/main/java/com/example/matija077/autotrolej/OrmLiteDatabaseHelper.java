@@ -2,6 +2,7 @@ package com.example.matija077.autotrolej;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.support.v4.util.ArraySet;
 import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -9,18 +10,26 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.VisibleRegion;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
 import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.dao.GenericRawResults;
+import com.j256.ormlite.dao.ObjectCache;
 import com.j256.ormlite.stmt.PreparedQuery;
 import com.j256.ormlite.stmt.QueryBuilder;
 import com.j256.ormlite.stmt.Where;
+import com.j256.ormlite.stmt.query.In;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 
 /**
@@ -400,6 +409,40 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		return route;
 	}
 
+	public List<String> queryRoot_routMark() {
+		List<String[]> results = null;
+		Set<String> routeMarks = null;
+
+		try {
+			GenericRawResults<String[]> raw = routeDao.queryRaw("SELECT routeMark, category FROM route");
+			results = raw.getResults();
+			routeMarks = new ArraySet<>();
+			for (String[] result : results) {
+				Log.i("tag", String.valueOf(result[0]));
+				routeMarks.add(result[0].split("-")[0].concat("-").concat(result[1]));
+			}
+			Log.i("TAG", String.valueOf(raw));
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return new ArrayList(routeMarks);
+	}
+
+	public List<Route> queryRoot_routMark(String routeMarkValue) {
+		List<Route> routes = null;
+
+		try {
+			QueryBuilder<Route, Integer> queryBuilder = routeDao.queryBuilder();
+			queryBuilder.where().like("routeMark", routeMarkValue + "-" + "%");
+			routes = queryBuilder.query();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return routes;
+	}
+
 	//schedule
 	public void insertSchedule(Schedule s) {
 		Schedule schedule = s;
@@ -460,6 +503,19 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			Log.e("getAllStation_routes()", "Error filling stations or routes");
 		}
 
+		return schedules;
+	}
+
+	public List<Schedule> querySchedule_timeTable(Station_route station_route) {
+		List<Schedule> schedules = new ArrayList<>();
+
+		try {
+			QueryBuilder<Schedule, Integer> queryBuilderSchedule = scheduleDao.queryBuilder();
+			queryBuilderSchedule.where().eq("station_route_id", station_route.getId());
+			schedules = queryBuilderSchedule.query();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 		return schedules;
 	}
 
@@ -585,6 +641,56 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 			}
 		}
 		return station_routes;
+	}
+
+	public List<Station_route> queryStation_route_specific4(String routeMarkValue, String direction) {
+		List<Station_route> station_routes = null;
+		try {
+			QueryBuilder<Station_route, Integer> queryBuilderStation_route = station_routeDao.queryBuilder();
+			queryBuilderStation_route.where().eq("direction", direction.charAt(0));
+			QueryBuilder<Route, Integer> queryBuilderRoute = routeDao.queryBuilder();
+			queryBuilderRoute.where().eq("routeMark", routeMarkValue);
+			station_routes = queryBuilderStation_route.join(queryBuilderRoute).query();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		for (Station_route station_route : station_routes) {
+			try {
+				//routeDao.refresh(station_route.getRoute());
+				stationDao.refresh(station_route.getStation());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return station_routes;
+	}
+
+
+	public List<Station_route> queryStation_route_regexSpecific2(String routeMarkValue) {
+		List<Station_route> station_routes = null;
+
+		try {
+			//GenericRawResults<String[]> raw = routeDao.queryRaw("SELECT * FROM route WHERE routeMark LIKE ?");
+			QueryBuilder<Station_route, Integer> queryBuilderStation_route = station_routeDao.queryBuilder();
+			QueryBuilder<Route, Integer> queryBuilderRoute = routeDao.queryBuilder();
+			queryBuilderRoute.where().like("routeMark", routeMarkValue + "%");
+			station_routes = queryBuilderStation_route.join(queryBuilderRoute).query();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		if (station_routes.size() > 0) {
+			for (Station_route station_route : station_routes)
+				try {
+					stationDao.refresh(station_route.getStation());
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+		}
+
+		return  station_routes;
 	}
 
 	public List<Station_route> queryStation_route_specific3(Station station) throws SQLException {
