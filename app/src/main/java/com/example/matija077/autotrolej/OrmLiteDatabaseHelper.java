@@ -2,6 +2,7 @@ package com.example.matija077.autotrolej;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.location.Location;
 import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -28,8 +29,10 @@ import java.util.Map;
  */
 
 public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
+	//TODO: vratiti naziv iz baza.db u autotrolej.db i dodati da se svakome importa baza ako ne postoji, ako postoji init radit
+	// IMPORT BAZE: https://stackoverflow.com/questions/19886734/how-to-import-pre-made-db-to-sqlite-managed-by-ormlite
 
-	private static final String DATABASE_NAME = "autotorlej.db";
+	private static final String DATABASE_NAME = "baza.db";
 	private static final int DATABASE_VERSION = 9;
 
 	//JAVA interface for acessing Database objects
@@ -280,6 +283,31 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		return returnedStations;
 	}
 
+	public List<Station> queryStation_specific3(Location location, double radius) {
+		List<Station> stations = new ArrayList<Station>();
+		List<Station> returnedStations = new ArrayList<Station>();
+		try {
+			stations = stationDao.queryForAll();
+			for (Station station : stations) {
+
+				Location endPoint = new Location("");
+				endPoint.setLatitude(station.getGpsy());
+				endPoint.setLongitude(station.getGpsx());
+
+				//TODO: promjeniti iz zračne udaljenosti u normalnu
+				if (location.distanceTo(endPoint) <= radius) {
+					returnedStations.add(station);
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		stations = null;
+		return returnedStations;
+	}
+
 	//route
 	public void insertRoute(Route rt) {
 		Route route = rt;
@@ -380,7 +408,7 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 					where.eq("directionB", directionValue)
 				)
 			);
-			//PreparedQuery<Route> preparedQuery = queryBuilder.prepare();
+			//PreparedQuery<DirRoute> preparedQuery = queryBuilder.prepare();
 			route = queryBuilder.queryForFirst();
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -601,6 +629,51 @@ public class OrmLiteDatabaseHelper extends OrmLiteSqliteOpenHelper {
 		}
 
 		return station_routes;
+	}
+
+	public List<Station_route> queryStation_route_specific4(short stationNumStart, short stationNumEnd, String routeMarkValue, char direction) throws SQLException {
+
+		List<Station_route> station_routes = null;
+		try {
+			QueryBuilder<Station_route, Integer> queryBuilderStation_route = station_routeDao.queryBuilder();
+			queryBuilderStation_route.where().eq("direction", direction).and().between("stationNumber", stationNumStart, stationNumEnd);
+			queryBuilderStation_route.orderBy("stationNumber", true);
+			QueryBuilder<Route, Integer> queryBuilderRoute = routeDao.queryBuilder();
+			queryBuilderRoute.where().eq("routeMark", routeMarkValue);
+			station_routes = queryBuilderStation_route.join(queryBuilderRoute).query();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		for (Station_route station_route : station_routes) {
+			try {
+				routeDao.refresh(station_route.getRoute());
+				stationDao.refresh(station_route.getStation());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return station_routes;
+	}
+
+	public String querySchedule_specificMapTime(Station_route station_route, String date, String day) throws SQLException {
+
+		List<Schedule> schedules = null;
+
+		try {
+			QueryBuilder<Schedule, Integer> queryBuilderSchedule = scheduleDao.queryBuilder();
+			queryBuilderSchedule.where().eq("station_route_id", station_route.getId()).and().eq("day", day).and().between("date", "01:00:00.0000", "23:59:00.0000");
+            //queryBuilderSchedule.where().eq("station_route_id", station_route.getId()).and().eq("day", day).and().between("date", "date", "23:59:00.0000");
+			queryBuilderSchedule.limit(1l);
+			schedules = queryBuilderSchedule.query();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		if(schedules.isEmpty()) return "KASNO";
+
+		return schedules.get(0).getDate();
 	}
 
 	/*public List<Station_route> queryStation_route_specific3(double gpsx, double gpsy) {

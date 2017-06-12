@@ -52,4 +52,8 @@ public class Route {
     public void setDirectionB(String B) {
         this.directionB = B;
     }
+
+    public String getCategory() {
+        return this.category;
+    }
 }

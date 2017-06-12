@@ -262,7 +262,7 @@ public class parseScheduleDataIntentService extends IntentService {
 												station_routes.add(station_route);
 											}
 											if (MapsActivity.DebugOn) {
-												Log.i("Route station", String.valueOf(i)
+												Log.i("DirRoute station", String.valueOf(i)
 														.concat(String.valueOf(station_route)));
 											}
 										} catch (Exception e) {

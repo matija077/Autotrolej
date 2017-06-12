@@ -1,11 +1,16 @@
 package com.example.matija077.autotrolej;
 
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -14,7 +19,7 @@ import android.support.annotation.RequiresApi;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.Menu;
+import android.text.format.DateFormat;
 import android.widget.ExpandableListView;
 import android.widget.SearchView;
 import android.util.Log;
@@ -22,10 +27,14 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import com.example.matija077.autotrolej.DirectionModules.DirRoute;
+import com.example.matija077.autotrolej.DirectionModules.DirectionFinder;
+import com.example.matija077.autotrolej.DirectionModules.DirectionFinderListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Places;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -33,17 +42,18 @@ import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
-import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -53,7 +63,7 @@ import static java.lang.Boolean.TRUE;
 
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
-        autotrolej.asyncResponse {
+        autotrolej.asyncResponse, DirectionFinderListener {
 
     private GoogleMap mMap;
     private GoogleApiClient mGoogleApiClient;
@@ -79,6 +89,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     LatLng latLngSearch;
     MarkerOptions markerOptionsSerach;
     Marker markerSearch;
+    private final static int RADIUS = 500;
+    private List<List<MarkerOptions>> allRouteMarkers = new ArrayList<>();
+    private List<Marker> drawnMarkers = new ArrayList<>();
+    private List<Polyline> polylinePaths = new ArrayList<>();
+    private ProgressDialog progressDialog;
+    private Context mContext;
+    private String mode;
+    private List<List<DirRoute>> allDirRoutesSearch;
+    private String searchAddressText;
+    private List<List<Station_route>> matchingStationRoutes = new ArrayList<List<Station_route>>();
+    private HashMap<String, Double> chosenRouteDist = new HashMap<String, Double>();
+    private HashMap<String, String> chosenRouteTime = new HashMap<String, String>();
 
     MyInfoWindowAdapter infoWindow;
 
@@ -89,6 +111,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private HashMap<String, List<String>> listDataChild;
     private String[] ruteArray = {"2 - Srdoči - 5 min","5 - Drenova - 7 min","7 - Pehlin - 10 min","1 - Bivio - 15 min"};
     private boolean searching = false;
+    private boolean routeChosen = false;
+    private boolean wasSearching = false;
+    private int chosen = 0;
+
+    private String mDate;
+    private String mDay;
+
+    private LocationManager locationManager;
+    private LocationUpdateListener locationListener;
+    private List<LatLng> locationStations;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,6 +142,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
+
+        mContext = this;
 
         ImageButton btnBack = (ImageButton) findViewById(R.id.btnBack);
 
@@ -133,6 +167,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         searchPlace.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
+                progressDialog = ProgressDialog.show(mContext, "Molimo pričekajte.",
+                        "Pretraživanje puteva u tijeku..!", true);
+
                 new GeocoderTask().execute(query.toString());
                 searchPlace.clearFocus();
                 return false;
@@ -162,13 +199,46 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             public boolean onGroupClick(ExpandableListView parent, View v,
                                         int groupPosition, long id) {
                 if(searching && groupPosition == 0){
-                    searching = false;
-                    prepareListData();
-                    listAdapter.setListDataHeader(listDataHeader);
-                    listAdapter.setListDataChild(listDataChild);
-                    listAdapter.notifyDataSetChanged();
+                    if(routeChosen){
+                        prepareListDataRoutes();
+                        listAdapter.setNewItems(listDataHeader, listDataChild);
+                        routeChosen = false;
+
+                        int j = 0;
+                        for(String header : listDataHeader){
+                            expListView.expandGroup(j);
+                            j++;
+                        }
+
+                        locationManager.removeUpdates(locationListener);
+                    }else{
+                        searching = false;
+                        prepareListData();
+                        listAdapter.setNewItems(listDataHeader, listDataChild);
+                    }
+
+                    if (polylinePaths != null) {
+                        for (Polyline polyline:polylinePaths ) {
+                            polyline.remove();
+                        }
+                    }
+
+                    if (drawnMarkers != null) {
+                        for (Marker marker : drawnMarkers) {
+                            marker.remove();
+                        }
+                    }
+
+                    if (markerSearch != null) {
+                        markerSearch.remove();
+                    }
                 }
                 else if(searching){
+                    if(routeChosen){
+                        drawRoute(chosen, true);
+                    }else{
+                        drawRoute(groupPosition - 1, true);
+                    }
                     return true;
                 }
                 return false;
@@ -181,7 +251,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             @Override
             public void onGroupExpand(int groupPosition) {
 
-                if(!searching) mMap.animateCamera(CameraUpdateFactory.newLatLng(listLatLngStations.get(groupPosition)));
+                if(!searching && !wasSearching){
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(listLatLngStations.get(groupPosition)));
+                    wasSearching = false;
+                }
 
             }
         });
@@ -191,10 +264,34 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             @Override
             public void onGroupCollapse(int groupPosition) {
 
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(listLatLngStations.get(groupPosition)));
+                if(!searching && !wasSearching){
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(listLatLngStations.get(groupPosition)));
+                    wasSearching = false;
+                }
 
             }
         });
+
+        expListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
+            @Override
+            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
+                if(childPosition == 3 && searching){
+                    prepareListDataChosen(matchingStationRoutes.get(groupPosition - 1));
+                    listAdapter.setNewItems(listDataHeader, listDataChild);
+                    drawRoute(groupPosition - 1, false);
+                    chosen = groupPosition - 1;
+
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+
+                    routeChosen = true;
+                }
+                return false;
+            }
+        });
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationListener = new LocationUpdateListener();
     }
 
     /*
@@ -207,42 +304,22 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         listDataChild = new HashMap<String, List<String>>();
         int j = 0;
 
-        if(!searching){
-            //TODO: dodat podatke iz baze
-            // Adding child data
-            listDataHeader.add("Turkovo");
-            listLatLngStations.add(new LatLng(45.35, 14.39));
-            listDataHeader.add("Pehlin");
-            listLatLngStations.add(new LatLng(45.357, 14.391));
+        //TODO: dodat podatke iz baze
+        // Adding child data
+        listDataHeader.add("Turkovo");
+        listLatLngStations.add(new LatLng(45.35, 14.39));
+        listDataHeader.add("Pehlin");
+        listLatLngStations.add(new LatLng(45.357, 14.391));
 
-            for(String header : listDataHeader){
+        for(String header : listDataHeader){
 
-                List<String> child = new ArrayList<String>();
+            List<String> child = new ArrayList<String>();
 
-                for(int i = 0; i < ruteArray.length; i++){
-                    child.add(ruteArray[i]);
-                }
-
-                listDataChild.put(header, child);
+            for(int i = 0; i < ruteArray.length; i++){
+                child.add(ruteArray[i]);
             }
-        }else{
-            listDataHeader.add("PONIŠTI PRETRAGU");
-            listDataHeader.add("odstanice - linija - dostanice");
 
-            for(String header : listDataHeader){
-                expListView.expandGroup(j);
-                j++;
-
-                List<String> child = new ArrayList<String>();
-
-                if(header == listDataHeader.get(0)) {
-                    child.add(" ");
-                }else{
-                    child.add("vrijeme potrebno, ili neki drugi podatci");
-                }
-
-                listDataChild.put(header, child);
-            }
+            listDataChild.put(header, child);
         }
 
     }
@@ -268,10 +345,12 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         mMap.setInfoWindowAdapter(infoWindow);
 
-        LatLng okretiste = new LatLng(45.35, 14.39);
+/*        LatLng okretiste = new LatLng(45.35, 14.39);
         googleMap.addMarker(new MarkerOptions().position(okretiste).title("Turkovo")
                 .icon(BitmapDescriptorFactory.fromBitmap(
-                        resizeMapIcon("bus_station", 100, 100))));
+                        resizeMapIcon("bus_station", 100, 100))));*/
+
+        db = new OrmLiteDatabaseHelper(getApplicationContext());
 
         /*
 			override default behaviour of centering map whenever user clicks marker.
@@ -293,9 +372,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         return true;
                     }
                 }
-                mMap.setPadding(0, 400, 0, 0);
+                //mMap.setPadding(0, 400, 0, 0);
                 mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
-                mMap.setPadding(0, 0, 0, 0);
+                //mMap.setPadding(0, 0, 0, 0);
                 marker.showInfoWindow();
                 lastOpened = marker;
                 return  true;
@@ -308,7 +387,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         // Get the current location of the device and set the position of the map.
         getDeviceLocation();
 
-/*        if ((db.getWritableDatabase() != null) && (mLastKnownLocation != null)) {
+        /*if ((db.getWritableDatabase() != null) && (mLastKnownLocation != null)) {
             drawStations();
             mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
                 @Override
@@ -320,7 +399,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 						/*
 							TODO: tell the user that the zoom level is to low
 						*/
-/*					}
+			/*		}
 				}
 			});
 		} else {
@@ -354,10 +433,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         if (projection != null) {
             VisibleRegion visibleRegion = projection.getVisibleRegion();
             if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(visibleRegion));
-            mMap.addCircle(new CircleOptions().center(visibleRegion.farLeft).radius(150));
+            /*mMap.addCircle(new CircleOptions().center(visibleRegion.farLeft).radius(150));
             mMap.addCircle(new CircleOptions().center(visibleRegion.farRight).radius(150));
             mMap.addCircle(new CircleOptions().center(visibleRegion.nearLeft).radius(150));
-            mMap.addCircle(new CircleOptions().center(visibleRegion.nearRight).radius(150));
+            mMap.addCircle(new CircleOptions().center(visibleRegion.nearRight).radius(150));*/
             List<Station> stations = db.queryStation_specific2(visibleRegion);
             if (DebugOn) Log.i(TAG_onMapReady2, String.valueOf(stations));
 
@@ -541,6 +620,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         @Override
         protected void onPostExecute(List<Address> addresses) {
 
+            if (polylinePaths != null) {
+                for (Polyline polyline:polylinePaths ) {
+                    polyline.remove();
+                }
+            }
+
+            if (drawnMarkers != null) {
+                for (Marker marker : drawnMarkers) {
+                    marker.remove();
+                }
+            }
+
             // Clears last search marker on the map
             if (markerSearch != null) {
                 markerSearch.remove();
@@ -555,29 +646,465 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             searchPlace.setQuery("", false);
 
             // Adding Markers on Google Map for each matching address
-//            for(int i=0;i<addresses.size();i++){
-//                Address address = (Address) addresses.get(i);
+            //  for(int i=0;i<addresses.size();i++){
+            //      Address address = (Address) addresses.get(i);
             Address address = (Address) addresses.get(0);
             // Creating an instance of GeoPoint, to display in Google Map
             latLngSearch = new LatLng(address.getLatitude(), address.getLongitude());
 
-            String addressText = String.format("%s, %s",
+            searchAddressText = String.format("%s, %s",
                     address.getMaxAddressLineIndex() > 0 ? address.getAddressLine(0) : "",
                     address.getCountryName());
 
             markerOptionsSerach = new MarkerOptions();
             markerOptionsSerach.position(latLngSearch);
-            markerOptionsSerach.title(addressText);
-            infoWindow.setRuteArray(null);
+            markerOptionsSerach.title(searchAddressText);
+
+            String[] empty = {" "};
+            infoWindow.setRuteArray(empty);
+
             markerSearch = mMap.addMarker(markerOptionsSerach);
 
+            LatLngBounds.Builder builder = new LatLngBounds.Builder();
+            builder.include(markerSearch.getPosition());
+            builder.include(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
+            LatLngBounds bounds = builder.build();
+
+            CameraUpdate update = CameraUpdateFactory.newLatLngBounds(bounds, 100);
+            mMap.moveCamera(update);
+            mMap.animateCamera(update);
+
             searching = true;
-            //TODO:pozovi algoritam
-            prepareListData();
-            listAdapter.setListDataHeader(listDataHeader);
-            listAdapter.setListDataChild(listDataChild);
-            listAdapter.notifyDataSetChanged();
-//            }
+            wasSearching = true;
+
+            Location endPoint=new Location("");
+            endPoint.setLatitude(address.getLatitude());
+            endPoint.setLongitude(address.getLongitude());
+
+            //priprema podatke za pokretanje algoritma
+            prepareForAlgorithm(endPoint);
         }
     }
+
+    private void prepareForAlgorithm(Location endPoint){
+
+        //lista stanica u blizini nase lokacije
+        List<Station> stationsStart = db.queryStation_specific3(mLastKnownLocation, RADIUS);
+
+        List<List<Station_route>> stationRoutesStart = new ArrayList<List<Station_route>>();
+        for (int i = 0; i < stationsStart.size(); i++) {
+            try {
+                stationRoutesStart.add(db.queryStation_route_specific3(stationsStart.get(i)));
+            } catch (SQLException e) {
+                Log.e("stanice", e.toString());
+                e.printStackTrace();
+            } catch (Exception e) {
+                Log.e("stanice", "nes je " + e.toString());
+                e.printStackTrace();
+            }
+        }
+
+        //lista stanica u blizini trazene lokacije
+        List<Station> stationsEnd = db.queryStation_specific3(endPoint, RADIUS);
+
+        List<List<Station_route>> stationRoutesEnd = new ArrayList<List<Station_route>>();
+
+        for (int i = 0; i < stationsEnd.size(); i++) {
+            try {
+                stationRoutesEnd.add(db.queryStation_route_specific3(stationsEnd.get(i)));
+            } catch (SQLException e) {
+                e.printStackTrace();
+                Log.e("stanice", e.toString());
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e("stanice", "nes je " + e.toString());
+            }
+        }
+
+        //pronalazimo stanice iste rute istog smjera od naše lokacije do tražene
+        matchingStationRoutes = new ArrayList<List<Station_route>>();
+        chosenRouteDist = new HashMap<String, Double>();
+        chosenRouteTime = new HashMap<String, String>();
+
+        Date now = new Date();
+        mDate = DateFormat.format("HH:mm:ss", now).toString();
+        mDay = formatDay(DateFormat.format("EEE", now).toString());
+
+        //Log.d("stanice", mDate + " " + mDay);
+
+        if(stationsEnd != null || stationsStart != null) {
+            for (int i = 0; i < stationsStart.size(); i++) {
+                for (Station_route routeSrc : stationRoutesStart.get(i)) {
+                    try {
+                        for (int j = 0; j < stationsEnd.size(); j++) {
+                            for (Station_route routeDst : stationRoutesEnd.get(j)) {
+                                try {
+                                    if (routeSrc.getRoute().getRouteMark().equals(routeDst.getRoute().getRouteMark()) && routeSrc.getDirection().equals(routeDst.getDirection())) {
+
+                                        if (routeDst.getStationNumber() - routeSrc.getStationNumber() > 0) {
+
+                                            //TODO: ne zračna udaljenost!
+
+                                            Location srcStation = new Location("");
+                                            srcStation.setLatitude(routeSrc.getStation().getGpsy());
+                                            srcStation.setLongitude(routeSrc.getStation().getGpsx());
+
+                                            Location dstStation = new Location("");
+                                            dstStation.setLatitude(routeDst.getStation().getGpsy());
+                                            dstStation.setLongitude(routeDst.getStation().getGpsx());
+
+                                            double dist = mLastKnownLocation.distanceTo(srcStation) + endPoint.distanceTo(dstStation);
+                                            String time = db.querySchedule_specificMapTime(routeSrc, mDate, mDay);
+
+                                            String tempRouteMark = routeSrc.getRoute().getRouteMark().split("-")[0];
+
+                                            if (chosenRouteDist.containsKey(tempRouteMark)) {
+
+                                                //Integer test = time.compareTo(chosenRouteTime.get(tempRouteMark));
+                                                //Log.d("stanice", test.toString() + "  NOVO: " + time + "  STARO:" + chosenRouteTime.get(tempRouteMark) + "   lin: " + tempRouteMark);
+
+                                                if (dist < chosenRouteDist.get(tempRouteMark) && !time.equals("KASNO") && time.compareTo(chosenRouteTime.get(tempRouteMark)) < 0) {
+                                                    for (List<Station_route> tempRoute : matchingStationRoutes) {
+                                                        String tempMark = tempRoute.get(0).getRoute().getRouteMark().split("-")[0];
+                                                        if (tempMark.equals(tempRouteMark)) {
+                                                            matchingStationRoutes.remove(tempRoute);
+                                                            break;
+                                                        }
+                                                    }
+
+                                                    List<Station_route> tempList = new ArrayList<Station_route>();
+                                                    tempList.add(routeSrc);
+                                                    tempList.add(routeDst);
+                                                    matchingStationRoutes.add(tempList);
+                                                    chosenRouteDist.put(tempRouteMark, dist);
+                                                    chosenRouteTime.put(tempRouteMark, time);
+                                                }
+                                            } else if(!time.equals("KASNO")){
+
+                                                List<Station_route> tempList = new ArrayList<Station_route>();
+                                                tempList.add(routeSrc);
+                                                tempList.add(routeDst);
+                                                matchingStationRoutes.add(tempList);
+                                                chosenRouteDist.put(tempRouteMark, dist);
+                                                chosenRouteTime.put(tempRouteMark, time);
+                                            }
+                                        }
+
+                                    }
+                                } catch (Exception e) {
+                                    Log.e("stanice", e.toString());
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e("stanice", e.toString());
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }else{
+            //TODO: ispisati da nema stanica u blizini
+            Log.d("stanice", "NEMA PUTA");
+        }
+
+        prepareListDataRoutes();
+        listAdapter.setNewItems(listDataHeader, listDataChild);
+        int j = 0;
+
+        for(String header : listDataHeader){
+            expListView.expandGroup(j);
+            j++;
+        }
+
+        doAlgorithm(matchingStationRoutes, endPoint);
+    }
+
+    private void prepareListDataRoutes() {
+
+        listDataHeader = new ArrayList<String>();
+        listDataChild = new HashMap<String, List<String>>();
+
+        listDataHeader.add("PONIŠTI PRETRAGU");
+
+        String stationSrc = "";
+        String stationDst = "";
+
+        for (List<Station_route> tempList : matchingStationRoutes) {
+
+            Station_route tempStationRoute = tempList.get(0);
+            String tempStationName;
+
+            if(tempStationRoute.getDirection() == "A")
+                tempStationName = tempStationRoute.getRoute().getDirectionA();
+            else
+                tempStationName = tempStationRoute.getRoute().getDirectionB();
+
+            listDataHeader.add(tempStationRoute.getRoute().getRouteMark().split("-")[0] + "  " + tempStationName);
+
+            stationSrc = tempStationRoute.getStation().getName();
+            stationDst = tempList.get(1).getStation().getName();
+        }
+
+        for(String header : listDataHeader){
+
+            List<String> child = new ArrayList<String>();
+
+            if(header == listDataHeader.get(0)) {
+                child.add("ODREDIŠTE: " + searchAddressText);
+            }else{
+                child.add("  POČETNA STANICA: " + stationSrc);
+                child.add("ODREDIŠNA STANICA: " + stationDst);
+                child.add("          POLAZAK: " + chosenRouteTime.get(header.split(" ")[0]));
+                child.add("ODABERI");
+            }
+
+            listDataChild.put(header, child);
+        }
+    }
+
+    private void prepareListDataChosen(List<Station_route> route){
+        listDataHeader = new ArrayList<String>();
+        listDataChild = new HashMap<String, List<String>>();
+
+        listDataHeader.add("NATRAG");
+        String routeName;
+
+        if(route.get(0).getDirection() == "A")
+            routeName = route.get(0).getRoute().getDirectionA();
+        else
+            routeName = route.get(0).getRoute().getDirectionB();
+
+        listDataHeader.add(route.get(0).getRoute().getRouteMark().split("-")[0] + " " + routeName);
+
+        for(String header : listDataHeader){
+
+            List<String> child = new ArrayList<String>();
+
+            if(header == listDataHeader.get(0)) {
+                child.add("ODREDIŠTE: " + searchAddressText);
+            }else{
+                child.add("  POČETNA STANICA: " + route.get(0).getStation().getName());
+                child.add("ODREDIŠNA STANICA: " + route.get(1).getStation().getName());
+                child.add("          POLAZAK: " + chosenRouteTime.get(header.split(" ")[0]));
+            }
+
+            listDataChild.put(header, child);
+        }
+    }
+
+    private void doAlgorithm(List<List<Station_route>> matchingStationRoutes, Location endPoint){
+
+        allDirRoutesSearch = new ArrayList<>();
+        allRouteMarkers = new ArrayList<>();
+
+        double waypointLat;
+        double waypointLng;
+        String waypointsStanice = "";
+
+
+        for (List<Station_route> tempList : matchingStationRoutes) {
+
+            waypointsStanice = "";
+
+            Station_route tempStationRouteSrc = tempList.get(0);
+            Station_route tempStationRouteDst = tempList.get(1);
+
+            List<MarkerOptions> tempMarkers = new ArrayList<>();
+
+            waypointLat = tempStationRouteSrc.getStation().getGpsy();
+            waypointLng = tempStationRouteSrc.getStation().getGpsx();
+            waypointsStanice += waypointLat + "," + waypointLng;
+
+            tempMarkers.add(new MarkerOptions()
+                    .title( tempStationRouteSrc.getStation().getName())
+                    .position(new LatLng(waypointLat,waypointLng)).icon(BitmapDescriptorFactory.fromBitmap(
+                            resizeMapIcon("bus_station", 100, 100))));
+            try {
+                List<Station_route> tempStationRoutes = db.queryStation_route_specific4(tempStationRouteSrc.getStationNumber(),
+                                                                                        tempStationRouteDst.getStationNumber(),
+                                                                                        tempStationRouteSrc.getRoute().getRouteMark(),
+                                                                                        tempStationRouteSrc.getDirectionChar());
+
+                for(Station_route station_route : tempStationRoutes){
+
+                    waypointLat = station_route.getStation().getGpsy();
+                    waypointLng = station_route.getStation().getGpsx();
+                    waypointsStanice += "|" + waypointLat + "," + waypointLng;
+
+                    tempMarkers.add((new MarkerOptions()
+                            .title( station_route.getStation().getName())
+                            .position(new LatLng(waypointLat,waypointLng)).icon(BitmapDescriptorFactory.fromBitmap(
+                                    resizeMapIcon("bus_station", 100, 100)))));
+                }
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                Log.e("markeri", e.toString());
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e("markeri", "nes je " + e.toString());
+            }
+
+            /*if(locTemp != null){
+                locationStations.add(locTemp);
+            }
+            else{*/
+            //    locationStations.add(locSrc);
+            //}
+
+            waypointLat = tempStationRouteDst.getStation().getGpsy();
+            waypointLng = tempStationRouteDst.getStation().getGpsx();
+            waypointsStanice += "|" + waypointLat + "," + waypointLng;
+
+            //locationStations.add(locDst);
+
+            tempMarkers.add((new MarkerOptions()
+                    .title( tempStationRouteDst.getStation().getName())
+                    .position(new LatLng(waypointLat,waypointLng)).icon(BitmapDescriptorFactory.fromBitmap(
+                            resizeMapIcon("bus_station", 100, 100)))));
+
+            allRouteMarkers.add(tempMarkers);
+
+            mode = "walking";
+
+            try {
+                new DirectionFinder((DirectionFinderListener) mContext, mLastKnownLocation, endPoint, waypointsStanice, mode).execute();
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        }
+
+        progressDialog.dismiss();
+
+    }
+
+    @Override
+    public void onDirectionFinderStart() {
+
+    }
+
+    @Override
+    public void onDirectionFinderSuccess(List<DirRoute> dirRoutes) {
+
+        allDirRoutesSearch.add(dirRoutes);
+
+    }
+
+    private void drawRoute(int clickedGroup, boolean zoomOut){
+
+        //polylinePaths = new ArrayList<>();
+        List<DirRoute> dirRoutes = new ArrayList<>();
+
+        if (polylinePaths != null) {
+            for (Polyline polyline:polylinePaths ) {
+                polyline.remove();
+            }
+        }
+
+        if (drawnMarkers != null) {
+            for (Marker marker : drawnMarkers) {
+                marker.remove();
+            }
+        }
+
+        //ovisno koja je linija stisnuta
+        dirRoutes = allDirRoutesSearch.get(clickedGroup);
+        Log.d("putanja", dirRoutes.get(0).distance.text);
+
+        for(MarkerOptions marker : allRouteMarkers.get(clickedGroup)){
+            drawnMarkers.add(mMap.addMarker(marker));
+        }
+
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+
+        if(zoomOut){
+            builder.include(markerSearch.getPosition());
+            builder.include(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
+            for (Marker marker : drawnMarkers) {
+                builder.include(marker.getPosition());
+            }
+            LatLngBounds bounds = builder.build();
+
+            CameraUpdate update = CameraUpdateFactory.newLatLngBounds(bounds, 50);
+
+            mMap.moveCamera(update);
+            mMap.animateCamera(update);
+        }else{
+            builder.include(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()));
+            builder.include(drawnMarkers.get(0).getPosition());
+            LatLngBounds bounds = builder.build();
+            CameraUpdate update = CameraUpdateFactory.newLatLngBounds(bounds, 50);
+
+            mMap.moveCamera(update);
+            mMap.animateCamera(update);
+        }
+
+        for (DirRoute route : dirRoutes) {
+
+            Log.d("putanja", "  Udaljenost: " + route.distance.text);
+            Log.d("putanja", "  Trajanje: " + route.duration.text);
+
+            int lineColor = Color.BLUE;
+            float lineWidth = 5;
+
+            /*if(mode.equals("walking")){
+                lineColor = Color.BLUE;
+                lineWidth = 5;
+            }else{
+                lineColor = Color.RED;
+                lineWidth = 7;
+            }*/
+
+            PolylineOptions polylineOptions = new PolylineOptions().
+                    geodesic(true).
+                    color(lineColor).
+                    width(lineWidth);
+
+            for (int i = 0; i < route.points.size(); i++)
+                polylineOptions.add(route.points.get(i));
+
+            polylinePaths.add(mMap.addPolyline(polylineOptions));
+        }
+    }
+
+    private String formatDay(String day){
+        if(day.equals("sub"))
+            day = "subota";
+        else if(day.equals("ned"))
+            day = "nedjelja";
+        else
+            day = "radni dan";
+
+        return day;
+    }
+
+    class LocationUpdateListener implements LocationListener {
+
+        @Override
+        public void onLocationChanged(Location location) {
+            //if(location.distanceTo(locationStations.get(0)) <= 10){
+                Log.d("promjena", "na sljedecoj izlazis");
+            //}else if(location.distanceTo(locationStations.get(1)) <= 10){
+                Log.d("promjena", "sada izlazis");
+            //}
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+
+        }
+
+    }
+
 }

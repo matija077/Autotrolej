@@ -52,4 +52,10 @@ public class Station_route {
 	public String getDirection() {
         return String.valueOf(this.direction);
     }
+
+    public char getDirectionChar(){
+        return this.direction;
+    }
+
+    public Short getStationNumber() { return this.stationNumber; }
 }

@@ -339,7 +339,7 @@ public class parseDataIntentService extends IntentService {
 
 									/*
 										Check if route exists in routes. if it does return
-									 	Route object, if not go to the next object in JSON. Also
+									 	DirRoute object, if not go to the next object in JSON. Also
 									 	check for direction
 									*/
 									//j = 0;
@@ -449,7 +449,7 @@ public class parseDataIntentService extends IntentService {
 											//station_routes.add(station_route);
 											insertStationRoute(station_route);
 											if (MapsActivity.DebugOn) {
-												Log.i("Route station", String.valueOf(i)
+												Log.i("DirRoute station", String.valueOf(i)
 														.concat(String.valueOf(station_route)));
 											}
 										} catch (Exception e) {
@@ -514,8 +514,8 @@ public class parseDataIntentService extends IntentService {
 		optimization part which we will go back to when we have time.
 	*/
 	/*
-	private Route queryRoot(String[] columnNames, String[] params, String[] connectors) {
-		Route route = db.queryRoute(columnNames, params, connectors);
+	private DirRoute queryRoot(String[] columnNames, String[] params, String[] connectors) {
+		DirRoute route = db.queryRoute(columnNames, params, connectors);
 		return route;
 	}
 	*/

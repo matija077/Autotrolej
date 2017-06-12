@@ -44,4 +44,12 @@ public class Schedule {
     public Station_route getStation_route() {
 		return this.station_route;
 	}
+
+    public String getDate() {
+        return this.date;
+    }
+
+    public String getDay() {
+        return this.day;
+    }
 }

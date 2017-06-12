@@ -104,11 +104,11 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         return true;
     }
 
-    public void setListDataHeader(List<String> list){
-        _listDataHeader = list;
+    public void setNewItems(List<String> listDataHeader, HashMap<String, List<String>> listChildData) {
+        this._listDataHeader = listDataHeader;
+        this._listDataChild = listChildData;
+        notifyDataSetChanged();
+        notifyDataSetInvalidated();
     }
 
-    public void setListDataChild(HashMap<String, List<String>> map){
-        _listDataChild = map;
-    }
 }

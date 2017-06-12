@@ -291,10 +291,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		Log.d(TAG, String.valueOf(allStations));
 
 		for (int i = 0; i < newRoutes.size(); i++) {
-			db.insertRoute((Route) newRoutes.get(i));
+			db.insertRoute((DirRoute) newRoutes.get(i));
 		}
 
-		List<Route> allRoutes = new ArrayList<Route>();
+		List<DirRoute> allRoutes = new ArrayList<DirRoute>();
 		allRoutes = db.getAllRoutes();
 		Log.d(TAG, String.valueOf(allRoutes));
 
