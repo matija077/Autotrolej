@@ -182,13 +182,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 		/*
 		should we get all stations, routes and station routes? if we do we clear db.
 		*/
-		if (shouldWeParse()) {
+		/*if (shouldWeParse()) {
 		//if (TRUE) {
 			db.clear();
 			Intent intent = new Intent(this, parseDataIntentService.class);
 			intent.putStringArrayListExtra("urlList", (ArrayList<String>) urlList);
 			startService(intent);
-		}
+		}*/
 
 		/*
 			schedule here

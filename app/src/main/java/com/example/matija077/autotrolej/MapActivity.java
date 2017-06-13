@@ -351,7 +351,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         resizeMapIcon("bus_station", 100, 100))));*/
 
         db = new OrmLiteDatabaseHelper(getApplicationContext());
-
         /*
 			override default behaviour of centering map whenever user clicks marker.
 			Return True means that we suppress default behaviour so it doesn't happen. Also we
@@ -400,6 +399,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 							TODO: tell the user that the zoom level is to low
 						*/
 			/*		}
+
 				}
 			});
 		} else {

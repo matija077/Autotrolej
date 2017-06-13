@@ -13,21 +13,22 @@ import java.util.Date;
 
 @DatabaseTable(tableName = "schedule")
 public class Schedule {
+
     @DatabaseField(generatedId = true)
     private Integer id;
     @DatabaseField(canBeNull = false, foreign = true)
     private Station_route station_route;
-	//You can also specify the dataType field to the @DatabaseField annotation as a
-	// DataType.DATE_STRING in which case the date will be stored as a string in
-	// yyyy-MM-dd HH:mm:ss.SSSSSS format.
-	//setting format because default adds milliseconds.
-	//we don't care about format in base, for all we know it can be String.
-	//String makes this easy
+    //You can also specify the dataType field to the @DatabaseField annotation as a
+    // DataType.DATE_STRING in which case the date will be stored as a string in
+    // yyyy-MM-dd HH:mm:ss.SSSSSS format.
+    //setting format because default adds milliseconds.
+    //we don't care about format in base, for all we know it can be String.
+    //String makes this easy
     /*@DatabaseField(canBeNull = false, dataType = DataType.DATE_STRING,
 			format = " yyyy-MM-dd HH:mm:ss")
     private Date date;*/
     @DatabaseField(canBeNull = false)
-	private String date;
+    private String date;
     @DatabaseField(canBeNull = false)
     private String day;
 
@@ -42,8 +43,8 @@ public class Schedule {
     }
 
     public Station_route getStation_route() {
-		return this.station_route;
-	}
+        return this.station_route;
+    }
 
     public String getDate() {
         return this.date;
